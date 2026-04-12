@@ -1,0 +1,72 @@
+{
+  "name": "educlass-desktop",
+  "version": "1.0.0",
+  "description": "EduClass — School Management System",
+  "main": "main.js",
+  "author": "Maxpella Geraldo",
+  "license": "MIT",
+  "scripts": {
+    "dev":          "NODE_ENV=development electron .",
+    "build:win":    "electron-builder --win",
+    "build:mac":    "electron-builder --mac",
+    "build:linux":  "electron-builder --linux",
+    "build:all":    "electron-builder -mwl",
+    "postinstall":  "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-is-dev": "^3.0.0"
+  },
+  "devDependencies": {
+    "electron":         "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId":       "com.educlass.app",
+    "productName": "EduClass",
+    "copyright":   "Faculty of Engineering — BSc IT",
+    "icon": "assets/icon",
+
+    "extraResources": [
+      { "from": "../backend",         "to": "backend",  "filter": ["**/*", "!node_modules"] },
+      { "from": "../frontend/build",  "to": "frontend/build" }
+    ],
+
+    "extraFiles": [
+      { "from": "../backend/node_modules", "to": "resources/backend/node_modules" }
+    ],
+
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64", "ia32"] }],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "shortcutName": "EduClass"
+    },
+
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.education"
+    },
+    "dmg": {
+      "title": "Install EduClass",
+      "background": "assets/dmg-bg.png",
+      "window": { "width": 540, "height": 380 }
+    },
+
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png",
+      "category": "Education"
+    },
+
+    "publish": null
+  }
+}
