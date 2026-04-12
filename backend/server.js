@@ -8,6 +8,8 @@ const { globalErrorHandler } = require('./middleware/errorHandler');
 const { startJobs } = require('./jobs');
 
 const authRoutes       = require('./routes/auth');
+const feeRoutes        = require('./routes/fees');
+const { register }     = require('./controllers/registerController');
 const studentRoutes    = require('./routes/students');
 const teacherRoutes    = require('./routes/teachers');
 const classRoutes      = require('./routes/classes');
@@ -46,6 +48,8 @@ app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, t
 
 // ── API routes ───────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
+app.use('/api/fees',       feeRoutes);
+app.post('/api/auth/register', register);
 app.use('/api/students',   studentRoutes);
 app.use('/api/teachers',   teacherRoutes);
 app.use('/api/classes',    classRoutes);

@@ -16,6 +16,7 @@ const NAV = {
     { to: '/analytics',     label: 'Analytics'     },
     { to: '/messages',      label: 'Messages'      },
     { to: '/announcements', label: 'Announcements' },
+    { to: '/settings',      label: 'Settings'      },
   ],
   teacher: [
     { to: '/dashboard',     label: 'Dashboard'     },
@@ -24,6 +25,18 @@ const NAV = {
     { to: '/reports',       label: 'Reports'       },
     { to: '/messages',      label: 'Messages'      },
     { to: '/announcements', label: 'Announcements' },
+    { to: '/settings',      label: 'Settings'      },
+  ],
+  accountant: [
+    { to: '/fees',                label: 'Dashboard'       },
+    { to: '/fees/payments/new',   label: 'Record payment'  },
+    { to: '/fees/payments',       label: 'Payment history' },
+    { to: '/fees/defaulters',     label: 'Defaulters'      },
+    { to: '/fees/cleared',        label: 'Cleared'         },
+    { to: '/fees/structures',     label: 'Fee structures'  },
+    { to: '/messages',            label: 'Messages'        },
+    { to: '/announcements',       label: 'Announcements'   },
+    { to: '/settings',            label: 'Settings'        },
   ],
   parent: [
     { to: '/dashboard',     label: 'Dashboard'     },
@@ -31,6 +44,7 @@ const NAV = {
     { to: '/reports',       label: 'Reports'       },
     { to: '/messages',      label: 'Messages'      },
     { to: '/announcements', label: 'Announcements' },
+    { to: '/settings',      label: 'Settings'      },
   ],
   student: [
     { to: '/dashboard',     label: 'Home'          },
@@ -38,14 +52,16 @@ const NAV = {
     { to: '/reports',       label: 'Reports'       },
     { to: '/messages',      label: 'Messages'      },
     { to: '/announcements', label: 'Announcements' },
+    { to: '/settings',      label: 'Settings'      },
   ],
 };
 
 const ROLE_COLOR = {
-  admin:   'bg-blue-100 text-blue-700',
-  teacher: 'bg-teal-100 text-teal-700',
-  parent:  'bg-pink-100 text-pink-700',
-  student: 'bg-purple-100 text-purple-700',
+  admin:      'bg-blue-100 text-blue-700',
+  teacher:    'bg-teal-100 text-teal-700',
+  parent:     'bg-pink-100 text-pink-700',
+  student:    'bg-purple-100 text-purple-700',
+  accountant: 'bg-amber-100 text-amber-700',
 };
 
 export default function AppLayout() {
@@ -71,16 +87,13 @@ export default function AppLayout() {
 
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {links.map(link => (
-            <NavLink
-              key={link.to}
-              to={link.to}
+            <NavLink key={link.to} to={link.to}
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors
                  ${isActive
                    ? 'bg-blue-50 text-blue-700 font-medium'
                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`
-              }
-            >
+              }>
               {link.label}
             </NavLink>
           ))}

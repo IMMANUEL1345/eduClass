@@ -44,6 +44,7 @@ export const authAPI = {
   logout:        (body) => api.post('/auth/logout', body),
   forgotPassword:(body) => api.post('/auth/forgot-password', body),
   resetPassword: (body) => api.post('/auth/reset-password', body),
+  register:      (body) => api.post('/auth/register', body),
 };
 
 export const studentAPI = {
@@ -127,4 +128,20 @@ export const commsAPI = {
 export const classAPI_ext = {
   createSubject: (body)   => api.post('/subjects', body),
   removeSubject: (id)     => api.delete(`/subjects/${id}`),
+};
+
+export const feeAPI = {
+  listStructures: (params)    => api.get('/fees/structures', { params }),
+  createStructure:(body)      => api.post('/fees/structures', body),
+  updateStructure:(id, body)  => api.put(`/fees/structures/${id}`, body),
+  listPayments:   (params)    => api.get('/fees/payments', { params }),
+  recordPayment:  (body)      => api.post('/fees/payments', body),
+  studentBalance: (id, params)=> api.get(`/fees/balance/${id}`, { params }),
+  defaulters:     (params)    => api.get('/fees/defaulters', { params }),
+  cleared:        (params)    => api.get('/fees/cleared', { params }),
+  summary:        (params)    => api.get('/fees/summary', { params }),
+};
+
+export const authAPI_ext = {
+  register: (body) => api.post('/auth/register', body),
 };
