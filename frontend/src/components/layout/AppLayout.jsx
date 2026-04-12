@@ -28,15 +28,15 @@ const NAV = {
     { to: '/settings',      label: 'Settings'      },
   ],
   accountant: [
-    { to: '/fees',                label: 'Dashboard'       },
-    { to: '/fees/payments/new',   label: 'Record payment'  },
-    { to: '/fees/payments',       label: 'Payment history' },
-    { to: '/fees/defaulters',     label: 'Defaulters'      },
-    { to: '/fees/cleared',        label: 'Cleared'         },
-    { to: '/fees/structures',     label: 'Fee structures'  },
-    { to: '/messages',            label: 'Messages'        },
-    { to: '/announcements',       label: 'Announcements'   },
-    { to: '/settings',            label: 'Settings'        },
+    { to: '/fees',              label: 'Dashboard'       },
+    { to: '/fees/payments/new', label: 'Record payment'  },
+    { to: '/fees/payments',     label: 'Payment history' },
+    { to: '/fees/defaulters',   label: 'Defaulters'      },
+    { to: '/fees/cleared',      label: 'Cleared'         },
+    { to: '/fees/structures',   label: 'Fee structures'  },
+    { to: '/messages',          label: 'Messages'        },
+    { to: '/announcements',     label: 'Announcements'   },
+    { to: '/settings',          label: 'Settings'        },
   ],
   parent: [
     { to: '/dashboard',     label: 'Dashboard'     },
@@ -81,10 +81,14 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <aside className="w-52 flex-shrink-0 flex flex-col bg-white border-r border-gray-100">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <span className="text-base font-semibold text-gray-800">EduClass</span>
+
+        {/* Logo */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2.5">
+          <img src="/logo.png" alt="EduClass" className="w-8 h-8 object-contain" />
+          <span className="text-sm font-semibold text-gray-800">EduClass</span>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {links.map(link => (
             <NavLink key={link.to} to={link.to}
@@ -99,6 +103,7 @@ export default function AppLayout() {
           ))}
         </nav>
 
+        {/* User */}
         <div className="p-3 border-t border-gray-100">
           <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${ROLE_COLOR[user?.role]}`}>
