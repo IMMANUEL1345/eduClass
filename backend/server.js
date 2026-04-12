@@ -24,22 +24,37 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 
 // ── CORS ─────────────────────────────────────────────────
-const ALLOWED = [
-  'https://edu-class-pi.vercel.app',
-  process.env.APP_URL,
-  'http://localhost:3000',
-  'http://localhost:5000',
-].filter(Boolean);
-
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (origin.match(/https:\/\/educlass.*\.vercel\.app$/)) return cb(null, true);
-    if (ALLOWED.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: ${origin} not allowed`));
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Render health checks, mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    const allowed = [
+      'https://edu-class-pi.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:5000',
+    ];
+
+    // Also allow whatever APP_URL is set to in env
+    if (process.env.APP_URL) allowed.push(process.env.APP_URL);
+
+    // Allow any vercel.app preview URL for this project
+    if (origin.includes('vercel.app')) return callback(null, true);
+
+    if (allowed.includes(origin)) return callback(null, true);
+
+    // In development allow everything
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+
+    callback(new Error('CORS: ' + origin + ' not allowed'));
   },
   credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
 }));
+
+// Handle preflight for all routes
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -49,8 +64,8 @@ app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, t
 
 // ── API routes ───────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
-app.use('/api/fees',       feeRoutes);
 app.post('/api/auth/register', register);
+app.use('/api/fees',       feeRoutes);
 app.use('/api/students',   studentRoutes);
 app.use('/api/teachers',   teacherRoutes);
 app.use('/api/classes',    classRoutes);
@@ -61,9 +76,8 @@ app.use('/api/reports',    reportRoutes);
 app.use('/api/analytics',  analyticsRoutes);
 app.use('/api',            commsRoutes);
 
-// ── Serve React build in desktop (Electron) mode ─────────
-// When packaged as a desktop app, Express serves the frontend too.
-if (process.env.DESKTOP_MODE === 'true' || process.env.NODE_ENV === 'desktop') {
+// ── Desktop mode static serving ───────────────────────────
+if (process.env.DESKTOP_MODE === 'true') {
   const frontendBuild = path.join(__dirname, '../frontend/build');
   app.use(express.static(frontendBuild));
   app.get('*', (req, res) => {
@@ -84,7 +98,7 @@ async function start() {
   if (process.env.NODE_ENV !== 'test') startJobs();
   app.listen(PORT, () => {
     console.log(`EduClass API running on http://localhost:${PORT}`);
-    console.log(`Mode: ${process.env.DESKTOP_MODE === 'true' ? 'desktop' : 'cloud'}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
   });
 }
 
