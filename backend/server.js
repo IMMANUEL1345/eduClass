@@ -25,6 +25,7 @@ const PORT = process.env.PORT || 5000;
 
 // ── CORS ─────────────────────────────────────────────────
 const ALLOWED = [
+  'https://edu-class-pi.vercel.app',
   process.env.APP_URL,
   'http://localhost:3000',
   'http://localhost:5000',
