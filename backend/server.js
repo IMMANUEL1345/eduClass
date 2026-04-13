@@ -48,10 +48,22 @@ app.use(express.urlencoded({ extended: true }));
 // ── Health check ─────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, timestamp: new Date() }));
 
+// ── Test email ───────────────────────────────────────────
+app.get('/test-mail', async (req, res) => {
+  try {
+    const { sendWelcomeEmail } = require('./utils/mailer');
+    const to = req.query.to || process.env.MAIL_USER;
+    await sendWelcomeEmail(to, 'Test User', 'admin', 'TempPass@123');
+    res.json({ ok: true, message: `Test email sent to ${to}` });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // ── API routes ───────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
-app.post('/api/auth/register',    register);
-app.post('/api/2fa/validate',     validate2FA);
+app.post('/api/auth/register',  register);
+app.post('/api/2fa/validate',   validate2FA);
 app.use('/api/2fa',        twoFactorRoutes);
 app.use('/api/users',      userRoutes);
 app.use('/api/fees',       feeRoutes);
@@ -65,7 +77,6 @@ app.use('/api/reports',    reportRoutes);
 app.use('/api/analytics',  analyticsRoutes);
 app.use('/api',            commsRoutes);
 
-// ── Desktop mode ─────────────────────────────────────────
 if (process.env.DESKTOP_MODE === 'true') {
   const frontendBuild = path.join(__dirname, '../frontend/build');
   app.use(express.static(frontendBuild));
@@ -83,6 +94,7 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`EduClass API running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`Mail user: ${process.env.MAIL_USER}`);
   });
 }
 
