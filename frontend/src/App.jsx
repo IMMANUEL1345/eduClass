@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { store } from './store';
 import { useSelector } from 'react-redux';
-import { selectRole } from './store/slices/authSlice';
+import { selectRole, selectIsLoggedIn } from './store/slices/authSlice';
 
 import { RequireAuth, GuestOnly } from './components/layout/Guards';
 import AppLayout from './components/layout/AppLayout';
@@ -46,7 +46,8 @@ function DashboardRedirect() {
   if (role === 'accountant')  return <AccountantDashboard />;
   if (role === 'parent')      return <ParentDashboard />;
   if (role === 'student')     return <StudentDashboard />;
-  return <Navigate to="/login" replace />;
+  // Show nothing while role loads — do NOT auto-logout
+  return null;
 }
 
 function AppRoutes() {
@@ -63,21 +64,17 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard"           element={<DashboardRedirect />} />
           <Route path="/settings"            element={<Settings />} />
-
           <Route path="/students"            element={<Students />} />
           <Route path="/students/:id"        element={<StudentDetail />} />
           <Route path="/teachers"            element={<Teachers />} />
           <Route path="/classes"             element={<Classes />} />
           <Route path="/analytics"           element={<Analytics />} />
-
           <Route path="/attendance"          element={<TeacherAttendance />} />
           <Route path="/grades"              element={<TeacherGrades />} />
-
           <Route path="/reports"             element={<Reports />} />
           <Route path="/messages"            element={<Messages />} />
           <Route path="/announcements"       element={<Announcements />} />
           <Route path="/my-child"            element={<ParentDashboard />} />
-
           <Route path="/fees"                element={<AccountantDashboard />} />
           <Route path="/fees/payments/new"   element={<RecordPayment />} />
           <Route path="/fees/payments"       element={<PaymentHistory />} />
@@ -87,7 +84,7 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
