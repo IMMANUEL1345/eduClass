@@ -10,15 +10,14 @@ function signAccess(user) {
   return jwt.sign(
     { id: user.id, name: user.name, email: user.email, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    { expiresIn: parseInt(process.env.JWT_EXPIRES_IN) || 86400 }
   );
 }
-
 function signRefresh(user) {
   return jwt.sign(
     { id: user.id },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN }
+    { expiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_IN) || 604800 }
   );
 }
 
@@ -33,6 +32,7 @@ async function login(req, res) {
     if (!user) return error(res, 'Invalid email or password', 401);
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return error(res, 'Invalid email or password', 401);
+
     const accessToken  = signAccess(user);
     const refreshToken = signRefresh(user);
     const expiresAt    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -43,7 +43,13 @@ async function login(req, res) {
     return success(res, {
       token: accessToken,
       refreshToken,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id:                    user.id,
+        name:                  user.name,
+        email:                 user.email,
+        role:                  user.role,
+        force_password_change: user.force_password_change || false,
+      },
     });
   } catch (err) { return serverError(res, err); }
 }
@@ -95,8 +101,7 @@ async function resetPassword(req, res) {
   const { token, password } = req.body;
   try {
     const { rows } = await pool.query(
-      'SELECT id FROM users WHERE reset_token = $1 AND reset_expires > NOW() LIMIT 1',
-      [token]
+      'SELECT id FROM users WHERE reset_token = $1 AND reset_expires > NOW() LIMIT 1', [token]
     );
     if (!rows[0]) return error(res, 'Reset token is invalid or has expired', 400);
     const hash = await bcrypt.hash(password, 12);
@@ -120,9 +125,12 @@ async function changePassword(req, res) {
     const match = await bcrypt.compare(current_password, user.password_hash);
     if (!match) return error(res, 'Current password is incorrect', 401);
     const hash = await bcrypt.hash(new_password, 12);
-    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, force_password_change = FALSE WHERE id = $2',
+      [hash, req.user.id]
+    );
     await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.user.id]);
-    return success(res, {}, 'Password changed successfully');
+    return success(res, {}, 'Password changed successfully. Please log in again.');
   } catch (err) { return serverError(res, err); }
 }
 

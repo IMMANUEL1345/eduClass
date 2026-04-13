@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { success, created, notFound, serverError, error } = require('../utils/response');
 const { paginate } = require('../utils/helpers');
+const { sendAnnouncementEmail } = require('../utils/mailer');
 
 async function inbox(req, res) {
   const { limit, offset } = paginate(req.query);
@@ -12,7 +13,9 @@ async function inbox(req, res) {
        WHERE m.receiver_id = $1 ORDER BY m.created_at DESC LIMIT $2 OFFSET $3`,
       [req.user.id, limit, offset]
     );
-    const { rows: [{ total }] } = await pool.query('SELECT COUNT(*) AS total FROM messages WHERE receiver_id = $1', [req.user.id]);
+    const { rows: [{ total }] } = await pool.query(
+      'SELECT COUNT(*) AS total FROM messages WHERE receiver_id = $1', [req.user.id]
+    );
     return success(res, { messages: rows, total: parseInt(total) });
   } catch (err) { return serverError(res, err); }
 }
@@ -90,16 +93,29 @@ async function listAnnouncements(req, res) {
 
 async function createAnnouncement(req, res) {
   const { title, body, target_role } = req.body;
+  if (!title || !body) return error(res, 'Title and body required');
   try {
     const { rows: [r] } = await pool.query(
       'INSERT INTO announcements (author_id,title,body,target_role) VALUES ($1,$2,$3,$4) RETURNING id',
-      [req.user.id, title, body, target_role||'all']
+      [req.user.id, title, body, target_role || 'all']
     );
+
+    // Get targeted users
     const roleWhere = (!target_role || target_role === 'all') ? '' : `AND role = '${target_role}'`;
-    const { rows: users } = await pool.query(`SELECT id FROM users WHERE is_active = TRUE ${roleWhere}`);
-    for (const u of users) {
-      await pool.query('INSERT INTO notifications (user_id,type,title,body) VALUES ($1,$2,$3,$4)', [u.id,'announcement',title,body]);
-    }
+    const { rows: users } = await pool.query(
+      `SELECT id, email, name FROM users WHERE is_active = TRUE ${roleWhere}`
+    );
+
+    // In-app notifications + emails (async, don't block response)
+    Promise.all(users.map(async u => {
+      await pool.query(
+        'INSERT INTO notifications (user_id,type,title,body) VALUES ($1,$2,$3,$4)',
+        [u.id, 'announcement', title, body]
+      );
+      // Send email notification
+      sendAnnouncementEmail(u.email, u.name, title, body, req.user.name).catch(console.error);
+    })).catch(console.error);
+
     return created(res, { id: r.id }, 'Announcement posted');
   } catch (err) { return serverError(res, err); }
 }
@@ -136,4 +152,8 @@ async function deleteNotification(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
-module.exports = { inbox, sent, send, getOne, markRead, remove, listAnnouncements, createAnnouncement, listNotifications, markOneRead, markAllRead, deleteNotification };
+module.exports = {
+  inbox, sent, send, getOne, markRead, remove,
+  listAnnouncements, createAnnouncement,
+  listNotifications, markOneRead, markAllRead, deleteNotification,
+};

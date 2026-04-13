@@ -4,22 +4,24 @@ import { Provider } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { store } from './store';
 import { useSelector } from 'react-redux';
-import { selectRole, selectIsLoggedIn } from './store/slices/authSlice';
+import { selectRole, selectIsLoggedIn, selectForceChange } from './store/slices/authSlice';
 
 import { RequireAuth, GuestOnly } from './components/layout/Guards';
 import AppLayout from './components/layout/AppLayout';
 
-import Landing      from './pages/Landing';
-import Login        from './pages/auth/Login';
-import Register     from './pages/auth/Register';
+import Landing              from './pages/Landing';
+import Login                from './pages/auth/Login';
+import Register             from './pages/auth/Register';
+import ForceChangePassword  from './pages/auth/ForceChangePassword';
 
-import AdminDashboard   from './pages/admin/Dashboard';
-import TeacherDashboard from './pages/teacher/Dashboard';
-import Students         from './pages/admin/Students';
-import StudentDetail    from './pages/admin/StudentDetail';
-import Teachers         from './pages/admin/Teachers';
-import Classes          from './pages/admin/Classes';
-import Analytics        from './pages/admin/Analytics';
+import AdminDashboard    from './pages/admin/Dashboard';
+import TeacherDashboard  from './pages/teacher/Dashboard';
+import Students          from './pages/admin/Students';
+import StudentDetail     from './pages/admin/StudentDetail';
+import Teachers          from './pages/admin/Teachers';
+import Classes           from './pages/admin/Classes';
+import Analytics         from './pages/admin/Analytics';
+import UserManagement    from './pages/admin/UserManagement';
 
 import TeacherAttendance from './pages/teacher/Attendance';
 import TeacherGrades     from './pages/teacher/Grades';
@@ -40,20 +42,31 @@ import FeeStructures       from './pages/accountant/FeeStructures';
 import PaymentHistory      from './pages/accountant/PaymentHistory';
 
 function DashboardRedirect() {
-  const role = useSelector(selectRole);
+  const role        = useSelector(selectRole);
+  const forceChange = useSelector(selectForceChange);
+
+  if (forceChange) return <Navigate to="/change-password" replace />;
   if (role === 'admin')       return <AdminDashboard />;
   if (role === 'teacher')     return <TeacherDashboard />;
   if (role === 'accountant')  return <AccountantDashboard />;
   if (role === 'parent')      return <ParentDashboard />;
   if (role === 'student')     return <StudentDashboard />;
-  // Show nothing while role loads — do NOT auto-logout
   return null;
+}
+
+function ForceChangeGuard() {
+  const isLoggedIn  = useSelector(selectIsLoggedIn);
+  const forceChange = useSelector(selectForceChange);
+  if (!isLoggedIn)   return <Navigate to="/login" replace />;
+  if (!forceChange)  return <Navigate to="/dashboard" replace />;
+  return <ForceChangePassword />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/change-password" element={<ForceChangeGuard />} />
 
       <Route element={<GuestOnly />}>
         <Route path="/login"    element={<Login />} />
@@ -64,6 +77,7 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard"           element={<DashboardRedirect />} />
           <Route path="/settings"            element={<Settings />} />
+          <Route path="/users"               element={<UserManagement />} />
           <Route path="/students"            element={<Students />} />
           <Route path="/students/:id"        element={<StudentDetail />} />
           <Route path="/teachers"            element={<Teachers />} />
@@ -94,10 +108,7 @@ export default function App() {
     <Provider store={store}>
       <BrowserRouter>
         <AppRoutes />
-        <Toaster
-          position="top-right"
-          toastOptions={{ duration: 3500, style: { fontSize: '13px', borderRadius: '10px' } }}
-        />
+        <Toaster position="top-right" toastOptions={{ duration: 3500, style: { fontSize: '13px', borderRadius: '10px' } }} />
       </BrowserRouter>
     </Provider>
   );

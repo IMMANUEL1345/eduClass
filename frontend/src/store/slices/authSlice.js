@@ -15,12 +15,14 @@ export const logout = createAsyncThunk('auth/logout', async (_, { getState }) =>
   try { await authAPI.logout({ refreshToken }); } catch {}
 });
 
-const stored = localStorage.getItem('user');
+const stored = (() => {
+  try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+})();
 
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user:         stored ? JSON.parse(stored) : null,
+    user:         stored || null,
     token:        localStorage.getItem('token') || null,
     refreshToken: localStorage.getItem('refreshToken') || null,
     loading:      false,
@@ -28,6 +30,12 @@ const authSlice = createSlice({
   },
   reducers: {
     clearError: (state) => { state.error = null; },
+    clearForceChange: (state) => {
+      if (state.user) {
+        state.user.force_password_change = false;
+        localStorage.setItem('user', JSON.stringify(state.user));
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -52,12 +60,13 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, clearForceChange } = authSlice.actions;
 
-export const selectUser         = (s) => s.auth.user;
-export const selectRole         = (s) => s.auth.user?.role;
-export const selectAuthLoading  = (s) => s.auth.loading;
-export const selectAuthError    = (s) => s.auth.error;
-export const selectIsLoggedIn   = (s) => !!s.auth.token;
+export const selectUser             = (s) => s.auth.user;
+export const selectRole             = (s) => s.auth.user?.role;
+export const selectAuthLoading      = (s) => s.auth.loading;
+export const selectAuthError        = (s) => s.auth.error;
+export const selectIsLoggedIn       = (s) => !!s.auth.token;
+export const selectForceChange      = (s) => s.auth.user?.force_password_change === true;
 
 export default authSlice.reducer;

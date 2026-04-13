@@ -9,7 +9,10 @@ const { startJobs } = require('./jobs');
 
 const authRoutes       = require('./routes/auth');
 const feeRoutes        = require('./routes/fees');
+const userRoutes       = require('./routes/users');
+const twoFactorRoutes  = require('./routes/twoFactor');
 const { register }     = require('./controllers/registerController');
+const { validate: validate2FA } = require('./routes/twoFactor');
 const studentRoutes    = require('./routes/students');
 const teacherRoutes    = require('./routes/teachers');
 const classRoutes      = require('./routes/classes');
@@ -26,26 +29,11 @@ const PORT = process.env.PORT || 5000;
 // ── CORS ─────────────────────────────────────────────────
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (Render health checks, mobile apps, curl)
     if (!origin) return callback(null, true);
-
-    const allowed = [
-      'https://edu-class-pi.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:5000',
-    ];
-
-    // Also allow whatever APP_URL is set to in env
-    if (process.env.APP_URL) allowed.push(process.env.APP_URL);
-
-    // Allow any vercel.app preview URL for this project
     if (origin.includes('vercel.app')) return callback(null, true);
-
-    if (allowed.includes(origin)) return callback(null, true);
-
-    // In development allow everything
+    if (origin.includes('localhost'))  return callback(null, true);
+    if (process.env.APP_URL && origin === process.env.APP_URL) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
-
     callback(new Error('CORS: ' + origin + ' not allowed'));
   },
   credentials: true,
@@ -53,9 +41,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization'],
 }));
 
-// Handle preflight for all routes
 app.options('*', cors());
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -64,7 +50,10 @@ app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, t
 
 // ── API routes ───────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
-app.post('/api/auth/register', register);
+app.post('/api/auth/register',    register);
+app.post('/api/2fa/validate',     validate2FA);
+app.use('/api/2fa',        twoFactorRoutes);
+app.use('/api/users',      userRoutes);
 app.use('/api/fees',       feeRoutes);
 app.use('/api/students',   studentRoutes);
 app.use('/api/teachers',   teacherRoutes);
@@ -76,21 +65,16 @@ app.use('/api/reports',    reportRoutes);
 app.use('/api/analytics',  analyticsRoutes);
 app.use('/api',            commsRoutes);
 
-// ── Desktop mode static serving ───────────────────────────
+// ── Desktop mode ─────────────────────────────────────────
 if (process.env.DESKTOP_MODE === 'true') {
   const frontendBuild = path.join(__dirname, '../frontend/build');
   app.use(express.static(frontendBuild));
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(frontendBuild, 'index.html'));
-    }
+    if (!req.path.startsWith('/api')) res.sendFile(path.join(frontendBuild, 'index.html'));
   });
 }
 
-// ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ ok: false, message: `Route ${req.method} ${req.path} not found` }));
-
-// ── Global error handler ─────────────────────────────────
 app.use(globalErrorHandler);
 
 async function start() {

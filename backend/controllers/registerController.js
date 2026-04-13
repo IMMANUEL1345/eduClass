@@ -1,22 +1,17 @@
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 const { success, created, error, serverError } = require('../utils/response');
+const { sendRegistrationConfirmation, sendNewParentNotification } = require('../utils/mailer');
 
-// POST /api/auth/register  — parent self-registration
 async function register(req, res) {
   const { name, email, password, phone, occupation } = req.body;
-  if (!name || !email || !password) {
-    return error(res, 'Name, email and password are required');
-  }
-  if (password.length < 8) {
-    return error(res, 'Password must be at least 8 characters');
-  }
+  if (!name || !email || !password) return error(res, 'Name, email and password are required');
+  if (password.length < 8) return error(res, 'Password must be at least 8 characters');
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Check email not taken
     const { rows: existing } = await client.query(
       'SELECT id FROM users WHERE email = $1', [email.toLowerCase().trim()]
     );
@@ -24,8 +19,9 @@ async function register(req, res) {
 
     const hash = await bcrypt.hash(password, 12);
     const { rows: [u] } = await client.query(
-      'INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id',
-      [name, email.toLowerCase().trim(), hash, 'parent']
+      `INSERT INTO users (name, email, password_hash, role, force_password_change)
+       VALUES ($1,$2,$3,'parent',FALSE) RETURNING id`,
+      [name, email.toLowerCase().trim(), hash]
     );
 
     await client.query(
@@ -34,7 +30,19 @@ async function register(req, res) {
     );
 
     await client.query('COMMIT');
-    return created(res, {}, 'Account created successfully. You can now log in.');
+
+    // Send confirmation to parent
+    sendRegistrationConfirmation(email.toLowerCase().trim(), name).catch(console.error);
+
+    // Notify all admins
+    const { rows: admins } = await pool.query(
+      "SELECT email FROM users WHERE role = 'admin' AND is_active = TRUE"
+    );
+    for (const admin of admins) {
+      sendNewParentNotification(admin.email, name, email).catch(console.error);
+    }
+
+    return created(res, {}, 'Account created successfully. A confirmation email has been sent.');
   } catch (err) {
     await client.query('ROLLBACK');
     return serverError(res, err);
