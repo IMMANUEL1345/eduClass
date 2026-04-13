@@ -5,6 +5,7 @@ const api = axios.create({
   // In development, falls back to '/api' which is proxied by CRA to localhost:5000
   baseURL: process.env.REACT_APP_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
+  timeout: 90000, // 90 seconds — Render free tier needs up to 60s to wake up
 });
 
 // Attach access token to every request
@@ -19,11 +20,22 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+    // Only attempt refresh on 401 — ignore all other errors (500, network, etc.)
     if (err.response?.status === 401 && !original._retry) {
+      // Don't try to refresh if we're already on an auth endpoint
+      if (original.url?.includes('/auth/')) {
+        return Promise.reject(err);
+      }
       original._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+        if (!refreshToken) {
+          localStorage.clear();
+          window.location.href = '/login';
+          return Promise.reject(err);
+        }
+        const baseURL = process.env.REACT_APP_API_URL || '/api';
+        const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
         localStorage.setItem('token', data.data.token);
         original.headers.Authorization = `Bearer ${data.data.token}`;
         return api(original);
