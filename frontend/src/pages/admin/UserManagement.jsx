@@ -7,13 +7,14 @@ const ROLES      = ['admin','teacher','accountant','parent','student'];
 const ROLE_COLOR = { admin:'blue', teacher:'teal', accountant:'amber', parent:'pink', student:'purple' };
 
 export default function UserManagement() {
-  const [users,    setUsers]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [showReset,setShowReset]= useState(null);
-  const [saving,   setSaving]   = useState(false);
-  const [search,   setSearch]   = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [users,     setUsers]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [showForm,  setShowForm]  = useState(false);
+  const [showReset, setShowReset] = useState(null);
+  const [showDelete,setShowDelete]= useState(null);
+  const [saving,    setSaving]    = useState(false);
+  const [search,    setSearch]    = useState('');
+  const [roleFilter,setRoleFilter]= useState('');
   const [form, setForm] = useState({ name:'', email:'', password:'', role:'teacher', phone:'', specialization:'' });
   const [newPassword, setNewPassword] = useState('');
 
@@ -64,6 +65,17 @@ export default function UserManagement() {
     finally { setSaving(false); }
   }
 
+  async function handleDelete() {
+    setSaving(true);
+    try {
+      await api.delete(`/users/${showDelete.id}`);
+      toast.success('User deleted');
+      setShowDelete(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to delete'); }
+    finally { setSaving(false); }
+  }
+
   const filtered = users.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
                         u.email.toLowerCase().includes(search.toLowerCase());
@@ -72,23 +84,23 @@ export default function UserManagement() {
   });
 
   const columns = [
-    { key: 'name',       label: 'Name',    width: '180px' },
+    { key: 'name',       label: 'Name',    width: '160px' },
     { key: 'email',      label: 'Email',   width: '200px', render: v => <span className="text-xs text-gray-500">{v}</span> },
-    { key: 'role',       label: 'Role',    width: '110px',
-      render: v => <Badge color={ROLE_COLOR[v] || 'gray'}>{v}</Badge> },
-    { key: 'is_active',  label: 'Status',  width: '90px',
-      render: v => <Badge color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Badge> },
-    { key: 'created_at', label: 'Created', width: '120px',
-      render: v => new Date(v).toLocaleDateString('en-GB') },
-    { key: 'actions',    label: '',        width: '140px',
+    { key: 'role',       label: 'Role',    width: '110px', render: v => <Badge color={ROLE_COLOR[v] || 'gray'}>{v}</Badge> },
+    { key: 'is_active',  label: 'Status',  width: '90px',  render: v => <Badge color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Badge> },
+    { key: 'created_at', label: 'Created', width: '110px', render: v => new Date(v).toLocaleDateString('en-GB') },
+    { key: 'actions',    label: '',        width: '180px',
       render: (_, row) => (
         <div className="flex gap-2">
           <button onClick={() => handleToggleActive(row)}
-            className={`text-xs hover:underline ${row.is_active ? 'text-red-500' : 'text-green-600'}`}>
+            className={`text-xs hover:underline ${row.is_active ? 'text-amber-500' : 'text-green-600'}`}>
             {row.is_active ? 'Deactivate' : 'Activate'}
           </button>
           <button onClick={() => setShowReset(row)} className="text-xs text-blue-600 hover:underline">
             Reset pw
+          </button>
+          <button onClick={() => setShowDelete(row)} className="text-xs text-red-500 hover:underline">
+            Delete
           </button>
         </div>
       )},
@@ -102,7 +114,6 @@ export default function UserManagement() {
         action={<Button variant="primary" onClick={() => setShowForm(true)}>+ Create account</Button>}
       />
 
-      {/* Filters */}
       <div className="flex gap-3 mb-5">
         <Input placeholder="Search name or email…" value={search} onChange={e => setSearch(e.target.value)} className="w-56" />
         <Select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="w-36">
@@ -112,7 +123,6 @@ export default function UserManagement() {
         <Button onClick={load}>Refresh</Button>
       </div>
 
-      {/* Stats row */}
       <div className="flex gap-3 mb-5 flex-wrap">
         {ROLES.map(r => {
           const count = users.filter(u => u.role === r).length;
@@ -138,10 +148,10 @@ export default function UserManagement() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
             <h2 className="text-base font-medium text-gray-800 mb-5">Create account</h2>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
-              <Input label="Full name *"    value={form.name}  onChange={e => setForm(p=>({...p,name:e.target.value}))}  placeholder="John Doe" />
-              <Input label="Email *"        value={form.email} onChange={e => setForm(p=>({...p,email:e.target.value}))} placeholder="john@school.edu" type="email" />
+              <Input label="Full name *" value={form.name} onChange={e => setForm(p=>({...p,name:e.target.value}))} placeholder="John Doe" />
+              <Input label="Email *" value={form.email} onChange={e => setForm(p=>({...p,email:e.target.value}))} placeholder="john@school.edu" type="email" />
               <Select label="Role *" value={form.role} onChange={e => setForm(p=>({...p,role:e.target.value}))}>
-                {ROLES.map(r => <option key={r} value={r} className="capitalize">{r.charAt(0).toUpperCase()+r.slice(1)}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase()+r.slice(1)}</option>)}
               </Select>
               {form.role === 'teacher' && (
                 <Input label="Specialization" value={form.specialization} onChange={e => setForm(p=>({...p,specialization:e.target.value}))} placeholder="Mathematics" />
@@ -150,8 +160,8 @@ export default function UserManagement() {
                 <Input label="Phone" value={form.phone} onChange={e => setForm(p=>({...p,phone:e.target.value}))} placeholder="+233 24 000 0000" />
               )}
               <Input label="Password (optional)" value={form.password} onChange={e => setForm(p=>({...p,password:e.target.value}))}
-                placeholder="Leave blank for EduClass@123" type="password" />
-              <p className="text-xs text-gray-400">Default password if left blank: <code>EduClass@123</code></p>
+                placeholder="Leave blank for auto-generated" type="password" />
+              <p className="text-xs text-gray-400">If left blank, a secure password is auto-generated and emailed to the user.</p>
               <div className="flex justify-end gap-3 mt-2">
                 <Button type="button" onClick={() => setShowForm(false)}>Cancel</Button>
                 <Button type="submit" variant="primary" loading={saving}>Create account</Button>
@@ -175,6 +185,25 @@ export default function UserManagement() {
                 <Button type="submit" variant="primary" loading={saving}>Reset password</Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {showDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <h2 className="text-base font-medium text-gray-800 mb-2">Delete account</h2>
+            <p className="text-sm text-gray-500 mb-1">
+              Are you sure you want to permanently delete <strong>{showDelete.name}</strong>?
+            </p>
+            <p className="text-xs text-red-500 mb-5">
+              This cannot be undone. All data associated with this account will be removed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button onClick={() => setShowDelete(null)}>Cancel</Button>
+              <Button variant="danger" loading={saving} onClick={handleDelete}>Delete permanently</Button>
+            </div>
           </div>
         </div>
       )}

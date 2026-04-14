@@ -1,8 +1,6 @@
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { success, created, error, notFound, serverError } = require('../utils/response');
-const { generateCode } = require('../utils/helpers');
 const { sendWelcomeEmail } = require('../utils/mailer');
 
 const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant'];
@@ -10,10 +8,12 @@ const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant'];
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
   let pass = '';
-  for (let i = 0; i < 10; i++) {
-    pass += chars[Math.floor(Math.random() * chars.length)];
-  }
+  for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
   return pass;
+}
+
+function generateCode(prefix) {
+  return `${prefix}${Date.now().toString().slice(-6)}`;
 }
 
 async function list(req, res) {
@@ -27,7 +27,7 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { name, email, role, phone, specialization } = req.body;
+  const { name, email, role, phone, specialization, password } = req.body;
   if (!name || !email || !role) return error(res, 'Name, email and role are required');
   if (!VALID_ROLES.includes(role)) return error(res, `Role must be one of: ${VALID_ROLES.join(', ')}`);
 
@@ -40,8 +40,7 @@ async function create(req, res) {
     );
     if (existing[0]) return error(res, 'An account with this email already exists', 409);
 
-    // Generate system password
-    const tempPassword = generateTempPassword();
+    const tempPassword = password || generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, 12);
 
     const { rows: [u] } = await client.query(
@@ -50,33 +49,24 @@ async function create(req, res) {
       [name, email.toLowerCase().trim(), hash, role]
     );
 
-    // Create role profile
     if (role === 'teacher') {
-      const staffNumber = generateCode('TCH');
       await client.query(
         'INSERT INTO teachers (user_id, staff_number, specialization, phone) VALUES ($1,$2,$3,$4)',
-        [u.id, staffNumber, specialization || null, phone || null]
+        [u.id, generateCode('TCH'), specialization || null, phone || null]
       );
     } else if (role === 'parent') {
       await client.query(
         'INSERT INTO parents (user_id, phone) VALUES ($1,$2)',
         [u.id, phone || null]
       );
-    } else if (role === 'student') {
-      // Student accounts need class_id — skip profile here, admin sets via Students page
     }
 
     await client.query('COMMIT');
 
-    // Send welcome email with temp password
+    // Send welcome email
     sendWelcomeEmail(email.toLowerCase().trim(), name, role, tempPassword).catch(console.error);
 
-    return created(res, {
-      id: u.id,
-      role,
-      temp_password: tempPassword,
-      message: `Account created. Welcome email sent to ${email}.`
-    });
+    return created(res, { id: u.id, role }, `Account created. Welcome email sent to ${email}.`);
   } catch (err) {
     await client.query('ROLLBACK');
     return serverError(res, err);
@@ -111,7 +101,7 @@ async function resetUserPassword(req, res) {
   const { new_password } = req.body;
   if (!new_password || new_password.length < 8) return error(res, 'Password must be at least 8 characters');
   try {
-    const { rows } = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [req.params.id]);
+    const { rows } = await pool.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
     if (!rows[0]) return notFound(res, 'User not found');
     const hash = await bcrypt.hash(new_password, 12);
     await pool.query(
@@ -126,8 +116,11 @@ async function resetUserPassword(req, res) {
 async function remove(req, res) {
   if (req.user.id === parseInt(req.params.id)) return error(res, 'You cannot delete your own account');
   try {
-    await pool.query('UPDATE users SET is_active = FALSE WHERE id = $1', [req.params.id]);
-    return success(res, {}, 'User deactivated');
+    const { rows } = await pool.query('SELECT id, role FROM users WHERE id = $1', [req.params.id]);
+    if (!rows[0]) return notFound(res, 'User not found');
+    // Hard delete — cascades to related records
+    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    return success(res, {}, 'User deleted permanently');
   } catch (err) { return serverError(res, err); }
 }
 
