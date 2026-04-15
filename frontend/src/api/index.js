@@ -111,6 +111,10 @@ export const gradeAPI = {
 };
 
 export const reportAPI = {
+  attendanceReport:    (params) => api.get("/reports/attendance", { params }),
+  enrollmentReport:    (params) => api.get("/reports/enrollment", { params }),
+  feeCollectionReport: (params) => api.get("/reports/fee-collection", { params }),
+  expenseSummaryReport:(params) => api.get("/reports/expense-summary", { params }),
   generate:  (body)   => api.post('/reports/generate', body),
   getOne:    (id)     => api.get(`/reports/${id}`),
   byStudent: (sid)    => api.get(`/reports/student/${sid}`),
