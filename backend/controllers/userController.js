@@ -3,7 +3,7 @@ const { pool } = require('../config/db');
 const { success, created, error, notFound, serverError } = require('../utils/response');
 const { sendWelcomeEmail } = require('../utils/mailer');
 
-const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant'];
+const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant', 'cashier', 'admissions_officer'];
 
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';

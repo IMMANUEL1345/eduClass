@@ -7,26 +7,29 @@ const { testConnection } = require('./config/db');
 const { globalErrorHandler } = require('./middleware/errorHandler');
 const { startJobs } = require('./jobs');
 
-const authRoutes       = require('./routes/auth');
-const feeRoutes        = require('./routes/fees');
-const userRoutes       = require('./routes/users');
-const twoFactorRoutes  = require('./routes/twoFactor');
-const { register }     = require('./controllers/registerController');
+const authRoutes        = require('./routes/auth');
+const feeRoutes         = require('./routes/fees');
+const userRoutes        = require('./routes/users');
+const twoFactorRoutes   = require('./routes/twoFactor');
+const { register }      = require('./controllers/registerController');
 const { validate: validate2FA } = require('./routes/twoFactor');
-const studentRoutes    = require('./routes/students');
-const teacherRoutes    = require('./routes/teachers');
-const classRoutes      = require('./routes/classes');
-const subjectRoutes    = require('./routes/subjects');
-const attendanceRoutes = require('./routes/attendance');
-const gradeRoutes      = require('./routes/grades');
-const reportRoutes     = require('./routes/reports');
-const commsRoutes      = require('./routes/comms');
-const analyticsRoutes  = require('./routes/analytics');
+const studentRoutes     = require('./routes/students');
+const teacherRoutes     = require('./routes/teachers');
+const classRoutes       = require('./routes/classes');
+const subjectRoutes     = require('./routes/subjects');
+const attendanceRoutes  = require('./routes/attendance');
+const gradeRoutes       = require('./routes/grades');
+const reportRoutes      = require('./routes/reports');
+const commsRoutes       = require('./routes/comms');
+const analyticsRoutes   = require('./routes/analytics');
+const admissionRoutes   = require('./routes/admissions');
+const inventoryRoutes   = require('./routes/inventory');
+const expenseRoutes     = require('./routes/expenses');
+const timetableRoutes   = require('./routes/timetable');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
-// ── CORS ─────────────────────────────────────────────────
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -45,37 +48,36 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Health check ─────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, timestamp: new Date() }));
 
-// ── Test email ───────────────────────────────────────────
 app.get('/test-mail', async (req, res) => {
   try {
     const { sendWelcomeEmail } = require('./utils/mailer');
     const to = req.query.to || process.env.MAIL_USER;
     await sendWelcomeEmail(to, 'Test User', 'admin', 'TempPass@123');
     res.json({ ok: true, message: `Test email sent to ${to}` });
-  } catch (err) {
-    res.json({ ok: false, error: err.message });
-  }
+  } catch (err) { res.json({ ok: false, error: err.message }); }
 });
 
-// ── API routes ───────────────────────────────────────────
-app.use('/api/auth',       authRoutes);
-app.post('/api/auth/register',  register);
-app.post('/api/2fa/validate',   validate2FA);
-app.use('/api/2fa',        twoFactorRoutes);
-app.use('/api/users',      userRoutes);
-app.use('/api/fees',       feeRoutes);
-app.use('/api/students',   studentRoutes);
-app.use('/api/teachers',   teacherRoutes);
-app.use('/api/classes',    classRoutes);
-app.use('/api/subjects',   subjectRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/grades',     gradeRoutes);
-app.use('/api/reports',    reportRoutes);
-app.use('/api/analytics',  analyticsRoutes);
-app.use('/api',            commsRoutes);
+app.use('/api/auth',        authRoutes);
+app.post('/api/auth/register', register);
+app.post('/api/2fa/validate',  validate2FA);
+app.use('/api/2fa',         twoFactorRoutes);
+app.use('/api/users',       userRoutes);
+app.use('/api/fees',        feeRoutes);
+app.use('/api/students',    studentRoutes);
+app.use('/api/teachers',    teacherRoutes);
+app.use('/api/classes',     classRoutes);
+app.use('/api/subjects',    subjectRoutes);
+app.use('/api/attendance',  attendanceRoutes);
+app.use('/api/grades',      gradeRoutes);
+app.use('/api/reports',     reportRoutes);
+app.use('/api/analytics',   analyticsRoutes);
+app.use('/api/admissions',  admissionRoutes);
+app.use('/api/inventory',   inventoryRoutes);
+app.use('/api/expenses',    expenseRoutes);
+app.use('/api/timetable',   timetableRoutes);
+app.use('/api',             commsRoutes);
 
 if (process.env.DESKTOP_MODE === 'true') {
   const frontendBuild = path.join(__dirname, '../frontend/build');

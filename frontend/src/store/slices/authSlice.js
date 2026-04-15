@@ -39,8 +39,8 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => { state.loading = true; state.error = null; })
-      .addCase(login.fulfilled, (state, { payload }) => {
+      .addCase(login.pending,    (state)           => { state.loading = true; state.error = null; })
+      .addCase(login.fulfilled,  (state, { payload }) => {
         state.loading      = false;
         state.user         = payload.user;
         state.token        = payload.token;
@@ -49,10 +49,7 @@ const authSlice = createSlice({
         localStorage.setItem('refreshToken', payload.refreshToken);
         localStorage.setItem('user',         JSON.stringify(payload.user));
       })
-      .addCase(login.rejected, (state, { payload }) => {
-        state.loading = false;
-        state.error   = payload;
-      })
+      .addCase(login.rejected,   (state, { payload }) => { state.loading = false; state.error = payload; })
       .addCase(logout.fulfilled, (state) => {
         state.user = null; state.token = null; state.refreshToken = null;
         localStorage.clear();
@@ -62,11 +59,11 @@ const authSlice = createSlice({
 
 export const { clearError, clearForceChange } = authSlice.actions;
 
-export const selectUser             = (s) => s.auth.user;
-export const selectRole             = (s) => s.auth.user?.role;
-export const selectAuthLoading      = (s) => s.auth.loading;
-export const selectAuthError        = (s) => s.auth.error;
-export const selectIsLoggedIn       = (s) => !!s.auth.token;
-export const selectForceChange      = (s) => s.auth.user?.force_password_change === true;
+export const selectUser        = (s) => s.auth.user;
+export const selectRole        = (s) => s.auth.user?.role;
+export const selectAuthLoading = (s) => s.auth.loading;
+export const selectAuthError   = (s) => s.auth.error;
+export const selectIsLoggedIn  = (s) => !!s.auth.token;
+export const selectForceChange = (s) => s.auth.user?.force_password_change === true;
 
 export default authSlice.reducer;

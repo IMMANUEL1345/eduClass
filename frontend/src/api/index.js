@@ -1,11 +1,11 @@
 import axios from 'axios';
 
+const BASE_URL = process.env.REACT_APP_API_URL || '/api';
+
 const api = axios.create({
-  // In production (Vercel), REACT_APP_API_URL = https://your-app.onrender.com/api
-  // In development, falls back to '/api' which is proxied by CRA to localhost:5000
-  baseURL: process.env.REACT_APP_API_URL || '/api',
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 90000, // 90 seconds — Render free tier needs up to 60s to wake up
+  timeout: 90000,
 });
 
 // Attach access token to every request
@@ -15,59 +15,63 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401, try refresh — then retry original request once
+// On 401, refresh token then retry once
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    // Only attempt refresh on 401 — ignore all other errors (500, network, etc.)
+
     if (err.response?.status === 401 && !original._retry) {
-      // Don't try to refresh if we're already on an auth endpoint
-      if (original.url?.includes('/auth/')) {
+      original._retry = true;
+
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(err);
       }
-      original._retry = true;
+
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          localStorage.clear();
-          window.location.href = '/login';
-          return Promise.reject(err);
-        }
-        const baseURL = process.env.REACT_APP_API_URL || '/api';
-        const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
-        localStorage.setItem('token', data.data.token);
-        original.headers.Authorization = `Bearer ${data.data.token}`;
+        // Use full URL for refresh so it works on Vercel
+        const { data } = await axios.post(
+          `${BASE_URL}/auth/refresh`,
+          { refreshToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        const newToken = data.data.token;
+        localStorage.setItem('token', newToken);
+        original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       } catch {
         localStorage.clear();
         window.location.href = '/login';
+        return Promise.reject(err);
       }
     }
+
     return Promise.reject(err);
   }
 );
 
 export default api;
 
-// ── Typed endpoint helpers ────────────────────────────────
 export const authAPI = {
-  login:         (body) => api.post('/auth/login', body),
-  logout:        (body) => api.post('/auth/logout', body),
-  forgotPassword:(body) => api.post('/auth/forgot-password', body),
-  resetPassword: (body) => api.post('/auth/reset-password', body),
-  register:      (body) => api.post('/auth/register', body),
+  login:          (body) => api.post('/auth/login', body),
+  logout:         (body) => api.post('/auth/logout', body),
+  forgotPassword: (body) => api.post('/auth/forgot-password', body),
+  resetPassword:  (body) => api.post('/auth/reset-password', body),
+  register:       (body) => api.post('/auth/register', body),
 };
 
 export const studentAPI = {
-  list:          (params) => api.get('/students', { params }),
-  create:        (body)   => api.post('/students', body),
-  getOne:        (id)     => api.get(`/students/${id}`),
-  update:        (id, b)  => api.put(`/students/${id}`, b),
-  remove:        (id)     => api.delete(`/students/${id}`),
-  grades:        (id, p)  => api.get(`/students/${id}/grades`, { params: p }),
-  attendance:    (id, p)  => api.get(`/students/${id}/attendance`, { params: p }),
-  reports:       (id)     => api.get(`/students/${id}/reports`),
+  list:       (params) => api.get('/students', { params }),
+  create:     (body)   => api.post('/students', body),
+  getOne:     (id)     => api.get(`/students/${id}`),
+  update:     (id, b)  => api.put(`/students/${id}`, b),
+  remove:     (id)     => api.delete(`/students/${id}`),
+  grades:     (id, p)  => api.get(`/students/${id}/grades`, { params: p }),
+  attendance: (id, p)  => api.get(`/students/${id}/attendance`, { params: p }),
+  reports:    (id)     => api.get(`/students/${id}/reports`),
 };
 
 export const teacherAPI = {
@@ -80,12 +84,12 @@ export const teacherAPI = {
 };
 
 export const classAPI = {
-  list:        (params) => api.get('/classes', { params }),
-  create:      (body)   => api.post('/classes', body),
-  getOne:      (id)     => api.get(`/classes/${id}`),
-  update:      (id, b)  => api.put(`/classes/${id}`, b),
-  students:    (id)     => api.get(`/classes/${id}/students`),
-  subjects:    (id)     => api.get(`/classes/${id}/subjects`),
+  list:          (params) => api.get('/classes', { params }),
+  create:        (body)   => api.post('/classes', body),
+  getOne:        (id)     => api.get(`/classes/${id}`),
+  update:        (id, b)  => api.put(`/classes/${id}`, b),
+  students:      (id)     => api.get(`/classes/${id}/students`),
+  subjects:      (id)     => api.get(`/classes/${id}/subjects`),
   createSubject: (body)   => api.post('/subjects', body),
   removeSubject: (id)     => api.delete(`/subjects/${id}`),
 };
@@ -107,10 +111,10 @@ export const gradeAPI = {
 };
 
 export const reportAPI = {
-  generate:   (body)   => api.post('/reports/generate', body),
-  getOne:     (id)     => api.get(`/reports/${id}`),
-  byStudent:  (sid)    => api.get(`/reports/student/${sid}`),
-  byClass:    (cid, p) => api.get(`/reports/class/${cid}`, { params: p }),
+  generate:  (body)   => api.post('/reports/generate', body),
+  getOne:    (id)     => api.get(`/reports/${id}`),
+  byStudent: (sid)    => api.get(`/reports/student/${sid}`),
+  byClass:   (cid, p) => api.get(`/reports/class/${cid}`, { params: p }),
 };
 
 export const analyticsAPI = {
@@ -122,38 +126,69 @@ export const analyticsAPI = {
 };
 
 export const commsAPI = {
-  inbox:                ()      => api.get('/messages/inbox'),
-  sent:                 ()      => api.get('/messages/sent'),
-  send:                 (body)  => api.post('/messages', body),
-  getMessage:           (id)    => api.get(`/messages/${id}`),
-  markMessageRead:      (id)    => api.put(`/messages/${id}/read`),
-  deleteMessage:        (id)    => api.delete(`/messages/${id}`),
-  announcements:        ()      => api.get('/announcements'),
-  createAnnouncement:   (body)  => api.post('/announcements', body),
-  notifications:        ()      => api.get('/notifications'),
-  markNotifRead:        (id)    => api.put(`/notifications/${id}/read`),
-  markAllNotifsRead:    ()      => api.put('/notifications/read-all'),
-  deleteNotif:          (id)    => api.delete(`/notifications/${id}`),
-};
-
-// Additional classAPI method used in Classes.jsx
-export const classAPI_ext = {
-  createSubject: (body)   => api.post('/subjects', body),
-  removeSubject: (id)     => api.delete(`/subjects/${id}`),
+  inbox:              ()      => api.get('/messages/inbox'),
+  sent:               ()      => api.get('/messages/sent'),
+  send:               (body)  => api.post('/messages', body),
+  getMessage:         (id)    => api.get(`/messages/${id}`),
+  markMessageRead:    (id)    => api.put(`/messages/${id}/read`),
+  deleteMessage:      (id)    => api.delete(`/messages/${id}`),
+  announcements:      ()      => api.get('/announcements'),
+  createAnnouncement: (body)  => api.post('/announcements', body),
+  notifications:      ()      => api.get('/notifications'),
+  markNotifRead:      (id)    => api.put(`/notifications/${id}/read`),
+  markAllNotifsRead:  ()      => api.put('/notifications/read-all'),
+  deleteNotif:        (id)    => api.delete(`/notifications/${id}`),
 };
 
 export const feeAPI = {
-  listStructures: (params)    => api.get('/fees/structures', { params }),
-  createStructure:(body)      => api.post('/fees/structures', body),
-  updateStructure:(id, body)  => api.put(`/fees/structures/${id}`, body),
-  listPayments:   (params)    => api.get('/fees/payments', { params }),
-  recordPayment:  (body)      => api.post('/fees/payments', body),
-  studentBalance: (id, params)=> api.get(`/fees/balance/${id}`, { params }),
-  defaulters:     (params)    => api.get('/fees/defaulters', { params }),
-  cleared:        (params)    => api.get('/fees/cleared', { params }),
-  summary:        (params)    => api.get('/fees/summary', { params }),
+  listStructures:  (params)    => api.get('/fees/structures', { params }),
+  createStructure: (body)      => api.post('/fees/structures', body),
+  updateStructure: (id, body)  => api.put(`/fees/structures/${id}`, body),
+  listPayments:    (params)    => api.get('/fees/payments', { params }),
+  recordPayment:   (body)      => api.post('/fees/payments', body),
+  studentBalance:  (id, params)=> api.get(`/fees/balance/${id}`, { params }),
+  defaulters:      (params)    => api.get('/fees/defaulters', { params }),
+  cleared:         (params)    => api.get('/fees/cleared', { params }),
+  summary:         (params)    => api.get('/fees/summary', { params }),
 };
 
-export const authAPI_ext = {
-  register: (body) => api.post('/auth/register', body),
+export const admissionAPI = {
+  list:    (params)  => api.get('/admissions', { params }),
+  create:  (body)    => api.post('/admissions', body),
+  getOne:  (id)      => api.get(`/admissions/${id}`),
+  update:  (id, b)   => api.put(`/admissions/${id}`, b),
+  approve: (id)      => api.post(`/admissions/${id}/approve`),
+  reject:  (id, b)   => api.post(`/admissions/${id}/reject`, b),
+  stats:   (params)  => api.get('/admissions/stats', { params }),
+};
+
+export const inventoryAPI = {
+  listItems:    (params)     => api.get('/inventory/items', { params }),
+  createItem:   (body)       => api.post('/inventory/items', body),
+  updateItem:   (id, body)   => api.put(`/inventory/items/${id}`, body),
+  adjustStock:  (id, body)   => api.put(`/inventory/items/${id}/stock`, body),
+  listSales:    (params)     => api.get('/inventory/sales', { params }),
+  recordSale:   (body)       => api.post('/inventory/sales', body),
+  salesSummary: (params)     => api.get('/inventory/summary', { params }),
+};
+
+export const expenseAPI = {
+  list:    (params) => api.get('/expenses', { params }),
+  create:  (body)   => api.post('/expenses', body),
+  update:  (id, b)  => api.put(`/expenses/${id}`, b),
+  approve: (id)     => api.post(`/expenses/${id}/approve`),
+  reject:  (id)     => api.post(`/expenses/${id}/reject`),
+  remove:  (id)     => api.delete(`/expenses/${id}`),
+  summary: (params) => api.get('/expenses/summary', { params }),
+};
+
+export const timetableAPI = {
+  getClass:          (params) => api.get('/timetable/class', { params }),
+  getTeacher:        (params) => api.get('/timetable/teacher', { params }),
+  addEntry:          (body)   => api.post('/timetable', body),
+  updateEntry:       (id, b)  => api.put(`/timetable/${id}`, b),
+  removeEntry:       (id)     => api.delete(`/timetable/${id}`),
+  listAssignments:   (params) => api.get('/timetable/assignments', { params }),
+  assign:            (body)   => api.post('/timetable/assignments', body),
+  removeAssignment:  (id)     => api.delete(`/timetable/assignments/${id}`),
 };
