@@ -15,16 +15,17 @@ export const logout = createAsyncThunk('auth/logout', async (_, { getState }) =>
   try { await authAPI.logout({ refreshToken }); } catch {}
 });
 
+// Use sessionStorage so each tab is independent
 const stored = (() => {
-  try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+  try { return JSON.parse(sessionStorage.getItem('user')); } catch { return null; }
 })();
 
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user:         stored || null,
-    token:        localStorage.getItem('token') || null,
-    refreshToken: localStorage.getItem('refreshToken') || null,
+    token:        sessionStorage.getItem('token') || null,
+    refreshToken: sessionStorage.getItem('refreshToken') || null,
     loading:      false,
     error:        null,
   },
@@ -33,26 +34,29 @@ const authSlice = createSlice({
     clearForceChange: (state) => {
       if (state.user) {
         state.user.force_password_change = false;
-        localStorage.setItem('user', JSON.stringify(state.user));
+        sessionStorage.setItem('user', JSON.stringify(state.user));
       }
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending,    (state)           => { state.loading = true; state.error = null; })
-      .addCase(login.fulfilled,  (state, { payload }) => {
+      .addCase(login.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(login.fulfilled, (state, { payload }) => {
         state.loading      = false;
         state.user         = payload.user;
         state.token        = payload.token;
         state.refreshToken = payload.refreshToken;
-        localStorage.setItem('token',        payload.token);
-        localStorage.setItem('refreshToken', payload.refreshToken);
-        localStorage.setItem('user',         JSON.stringify(payload.user));
+        sessionStorage.setItem('token',        payload.token);
+        sessionStorage.setItem('refreshToken', payload.refreshToken);
+        sessionStorage.setItem('user',         JSON.stringify(payload.user));
       })
-      .addCase(login.rejected,   (state, { payload }) => { state.loading = false; state.error = payload; })
+      .addCase(login.rejected, (state, { payload }) => {
+        state.loading = false;
+        state.error   = payload;
+      })
       .addCase(logout.fulfilled, (state) => {
         state.user = null; state.token = null; state.refreshToken = null;
-        localStorage.clear();
+        sessionStorage.clear();
       });
   },
 });
