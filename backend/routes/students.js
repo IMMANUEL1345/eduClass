@@ -5,13 +5,18 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-router.get('/',          authorize('admin','teacher'),                       ctrl.list);
-router.post('/',         authorize('admin'),                                 ctrl.create);
-router.get('/:id',       authorize('admin','teacher','parent','student'),    ctrl.getOne);
-router.put('/:id',       authorize('admin'),                                 ctrl.update);
-router.delete('/:id',    authorize('admin'),                                 ctrl.remove);
-router.get('/:id/grades',     authorize('admin','teacher','parent','student'), ctrl.getGrades);
-router.get('/:id/attendance', authorize('admin','teacher','parent'),          ctrl.getAttendance);
-router.get('/:id/reports',    authorize('admin','parent','student'),          ctrl.getReports);
+const ENROLL_ROLES = ['admin', 'admissions_officer'];
+const VIEW_ROLES   = ['admin', 'teacher', 'admissions_officer'];
+
+router.get('/my-children',    authorize('parent'),                          ctrl.myChildren);
+router.get('/',               authorize(...VIEW_ROLES),                     ctrl.list);
+router.post('/bulk',          authorize(...ENROLL_ROLES),                   ctrl.bulkCreate);
+router.post('/',              authorize(...ENROLL_ROLES),                   ctrl.create);
+router.get('/:id',            authorize(...VIEW_ROLES,'parent','student'),  ctrl.getOne);
+router.put('/:id',            authorize(...ENROLL_ROLES),                   ctrl.update);
+router.delete('/:id',         authorize('admin'),                           ctrl.remove);
+router.get('/:id/grades',     authorize(...VIEW_ROLES,'parent','student'),  ctrl.getGrades);
+router.get('/:id/attendance', authorize(...VIEW_ROLES,'parent'),            ctrl.getAttendance);
+router.get('/:id/reports',    authorize('admin','parent','student'),        ctrl.getReports);
 
 module.exports = router;

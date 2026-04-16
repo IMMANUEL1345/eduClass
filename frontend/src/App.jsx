@@ -36,7 +36,9 @@ import StudentDashboard from './pages/student/Dashboard';
 import Reports       from './pages/shared/Reports';
 import Messages      from './pages/shared/Messages';
 import Announcements from './pages/shared/Announcements';
-import Settings      from './pages/shared/Settings';
+import Settings        from './pages/shared/Settings';
+import StaffCheckIn    from './pages/shared/StaffCheckIn';
+import StaffAttendance from './pages/admin/StaffAttendance';
 
 // Accountant / fees
 import AccountantDashboard from './pages/accountant/Dashboard';
@@ -92,6 +94,8 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard"           element={<DashboardRedirect />} />
           <Route path="/settings"            element={<Settings />} />
+          <Route path="/check-in"            element={<StaffCheckIn />} />
+          <Route path="/staff-attendance"    element={<StaffAttendance />} />
 
           {/* Admin */}
           <Route path="/users"               element={<UserManagement />} />
