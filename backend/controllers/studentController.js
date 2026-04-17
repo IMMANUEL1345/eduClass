@@ -122,7 +122,7 @@ async function myChildren(req, res) {
     );
     if (!parent[0]) return success(res, []);
     const { rows } = await pool.query(
-      `SELECT s.id, s.student_number, s.gender, s.academic_year,
+      `SELECT s.id, s.student_number, s.gender, c.academic_year,
               u.name, u.email,
               c.name AS class_name, c.section
        FROM parent_student ps
