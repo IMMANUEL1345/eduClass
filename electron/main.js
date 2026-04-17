@@ -1,21 +1,18 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
-const { spawn } = require('child_process');
-const path   = require('path');
-const http   = require('http');
-const isDev  = process.env.NODE_ENV === 'development';
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, net } = require('electron');
+const path  = require('path');
+const isDev = process.env.NODE_ENV === 'development';
 
-const API_PORT  = 5000;
-const API_URL   = `http://localhost:${API_PORT}`;
+const APP_URL = 'https://edu-class-pi.vercel.app';
 
 let mainWindow   = null;
 let splashWindow = null;
-let backendProc  = null;
 
 // ── Splash screen ─────────────────────────────────────────
 function createSplash() {
   splashWindow = new BrowserWindow({
-    width: 400, height: 260,
+    width: 420, height: 280,
     frame: false, resizable: false, center: true,
+    alwaysOnTop: true,
     webPreferences: { nodeIntegration: false },
   });
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
@@ -25,7 +22,7 @@ function createSplash() {
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280, height: 800,
-    minWidth: 1024, minHeight: 640,
+    minWidth: 960, minHeight: 600,
     show: false,
     title: 'EduClass',
     icon: path.join(__dirname, 'assets', 'icon.png'),
@@ -33,21 +30,45 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      // Allow loading the Vercel app
+      webSecurity: true,
     },
   });
 
-  // In dev, load CRA dev server. In production, load from Express.
-  const url = isDev ? 'http://localhost:3000' : `http://localhost:${API_PORT}`;
-  mainWindow.loadURL(url);
+  mainWindow.loadURL(isDev ? 'http://localhost:3000' : APP_URL);
 
   mainWindow.once('ready-to-show', () => {
-    if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.destroy();
+      splashWindow = null;
+    }
     mainWindow.show();
-    if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.focus();
+  });
+
+  // If load fails (no internet) show a friendly error
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.destroy();
+      splashWindow = null;
+    }
+    mainWindow.loadFile(path.join(__dirname, 'offline.html'));
+    mainWindow.show();
   });
 
   mainWindow.on('closed', () => { mainWindow = null; });
   buildMenu();
+}
+
+// ── Check internet connectivity ───────────────────────────
+function checkOnline() {
+  return new Promise((resolve) => {
+    const request = net.request('https://edu-class-pi.vercel.app');
+    request.on('response', () => resolve(true));
+    request.on('error', () => resolve(false));
+    request.end();
+    setTimeout(() => resolve(false), 8000);
+  });
 }
 
 // ── Menu ─────────────────────────────────────────────────
@@ -56,29 +77,75 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => mainWindow?.reload() },
+        {
+          label: 'Reload page',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => mainWindow?.loadURL(APP_URL),
+        },
         { type: 'separator' },
-        { label: 'Quit EduClass', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() },
+        {
+          label: 'Quit EduClass',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => app.quit(),
+        },
       ],
     },
     {
       label: 'View',
       submenu: [
-        { label: 'Toggle fullscreen', accelerator: 'F11', click: () => mainWindow?.setFullScreen(!mainWindow.isFullScreen()) },
-        { label: 'Zoom in',  accelerator: 'CmdOrCtrl+=', click: () => mainWindow?.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() + 0.5) },
-        { label: 'Zoom out', accelerator: 'CmdOrCtrl+-', click: () => mainWindow?.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() - 0.5) },
-        { label: 'Reset zoom', accelerator: 'CmdOrCtrl+0', click: () => mainWindow?.webContents.setZoomLevel(0) },
+        {
+          label: 'Toggle fullscreen',
+          accelerator: 'F11',
+          click: () => mainWindow?.setFullScreen(!mainWindow.isFullScreen()),
+        },
+        {
+          label: 'Zoom in',
+          accelerator: 'CmdOrCtrl+=',
+          click: () => {
+            const level = mainWindow?.webContents.getZoomLevel() || 0;
+            mainWindow?.webContents.setZoomLevel(level + 0.5);
+          },
+        },
+        {
+          label: 'Zoom out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            const level = mainWindow?.webContents.getZoomLevel() || 0;
+            mainWindow?.webContents.setZoomLevel(level - 0.5);
+          },
+        },
+        {
+          label: 'Reset zoom',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => mainWindow?.webContents.setZoomLevel(0),
+        },
+        { type: 'separator' },
+        {
+          label: 'Open in browser',
+          click: () => shell.openExternal(APP_URL),
+        },
       ],
     },
     {
       label: 'Help',
       submenu: [
-        { label: 'EduClass documentation', click: () => shell.openExternal('https://github.com/your-org/educlass') },
-        { label: 'About EduClass',
+        {
+          label: 'About EduClass',
           click: () => dialog.showMessageBox(mainWindow, {
-            type: 'info', title: 'About EduClass',
+            type: 'info',
+            title: 'About EduClass',
             message: 'EduClass v1.0.0',
-            detail: 'Web-based school management system\nFaculty of Engineering — BSc Information Technology',
+            detail: [
+              'School Management System',
+              '',
+              'Student: Maxpella Geraldo',
+              'ID: BIT1001725',
+              'BSc Information Technology',
+              'Faculty of Engineering — Dept. ICT',
+              '',
+              `App URL: ${APP_URL}`,
+            ].join('\n'),
+            icon: path.join(__dirname, 'assets', 'icon.png'),
           }),
         },
       ],
@@ -87,68 +154,18 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// ── Start Express backend ─────────────────────────────────
-function startBackend() {
-  return new Promise((resolve, reject) => {
-    const serverEntry = isDev
-      ? path.join(__dirname, '../backend/server.js')
-      : path.join(process.resourcesPath, 'backend', 'server.js');
-
-    const env = {
-      ...process.env,
-      PORT:         String(API_PORT),
-      NODE_ENV:     'desktop',
-      DESKTOP_MODE: 'true',
-      // DATABASE_URL is read from the system env or from a local config file
-    };
-
-    backendProc = spawn(process.execPath, [serverEntry], {
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    backendProc.stdout.on('data', d => {
-      const msg = d.toString();
-      console.log('[backend]', msg.trim());
-      if (msg.includes('running on')) resolve();
-    });
-
-    backendProc.stderr.on('data', d => console.error('[backend error]', d.toString().trim()));
-
-    backendProc.on('error', reject);
-    backendProc.on('exit', (code) => {
-      console.log(`[backend] exited with code ${code}`);
-    });
-
-    // Fallback: poll for readiness
-    let attempts = 0;
-    const poll = setInterval(() => {
-      attempts++;
-      http.get(`${API_URL}/health`, (res) => {
-        if (res.statusCode === 200) { clearInterval(poll); resolve(); }
-      }).on('error', () => {});
-      if (attempts > 30) { clearInterval(poll); reject(new Error('Backend did not start')); }
-    }, 500);
-  });
-}
-
 // ── App lifecycle ─────────────────────────────────────────
 app.whenReady().then(async () => {
   createSplash();
 
-  try {
-    if (!isDev) {
-      await startBackend();
-    }
+  // Give splash 1.5s to show, then open main window
+  // The splash auto-hides when main window is ready-to-show
+  setTimeout(() => {
     createWindow();
-  } catch (err) {
-    dialog.showErrorBox('Startup failed', `EduClass could not start the server:\n${err.message}`);
-    app.quit();
-  }
+  }, 1500);
 });
 
 app.on('window-all-closed', () => {
-  if (backendProc) { backendProc.kill('SIGTERM'); backendProc = null; }
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -156,13 +173,11 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.on('before-quit', () => {
-  if (backendProc) { backendProc.kill('SIGTERM'); backendProc = null; }
-});
-
-// ── IPC: DB config from renderer ─────────────────────────
-ipcMain.handle('get-db-config', () => ({
-  url: process.env.DATABASE_URL || '',
-}));
-
+// ── IPC handlers ─────────────────────────────────────────
 ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
+
+ipcMain.handle('get-app-info', () => ({
+  version: app.getVersion(),
+  appUrl:  APP_URL,
+  platform: process.platform,
+}));

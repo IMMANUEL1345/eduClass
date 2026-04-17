@@ -2,30 +2,136 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    height: 260px; width: 400px;
-    background: #fff;
+    width: 420px; height: 280px;
+    background: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 16px;
-    border: 1px solid #e5e5e3;
+    align-items: center; justify-content: center;
+    gap: 0;
+    -webkit-user-select: none;
     user-select: none;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
   }
-  h1 { font-size: 28px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.5px; }
-  p  { font-size: 13px; color: #888; }
-  .bar { width: 180px; height: 3px; background: #f0f0ef; border-radius: 2px; overflow: hidden; }
-  .fill {
-    height: 100%; width: 0%; background: #2563eb; border-radius: 2px;
-    animation: load 2.5s ease-in-out forwards;
+
+  .logo-wrap {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    overflow: hidden;
   }
-  @keyframes load { 0%{width:0%} 60%{width:70%} 100%{width:95%} }
+
+  .logo-wrap img {
+    width: 64px; height: 64px;
+    object-fit: contain;
+  }
+
+  .logo-fallback {
+    width: 64px; height: 64px;
+    background: #2563eb;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: #fff;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 28px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .bar-wrap {
+    width: 200px; height: 3px;
+    background: #f3f4f6;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    border-radius: 99px;
+    animation: load 2.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes load {
+    0%   { width: 0%; }
+    30%  { width: 40%; }
+    60%  { width: 65%; }
+    85%  { width: 85%; }
+    100% { width: 95%; }
+  }
+
+  .status {
+    font-size: 11px;
+    color: #d1d5db;
+    animation: fade 0.5s ease 0.3s both;
+  }
+
+  .version {
+    position: absolute;
+    bottom: 12px;
+    font-size: 10px;
+    color: #e5e7eb;
+  }
+
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
+  <div class="logo-fallback" id="logoFallback">E</div>
   <h1>EduClass</h1>
-  <p>Starting up…</p>
-  <div class="bar"><div class="fill"></div></div>
+  <p class="subtitle">School Management System<br>Faculty of Engineering · Dept. ICT</p>
+  <div class="bar-wrap">
+    <div class="bar-fill"></div>
+  </div>
+  <p class="status">Starting up…</p>
+  <p class="version">v1.0.0</p>
+
+  <script>
+    // Try to load the actual logo
+    const img = new Image();
+    img.onload = () => {
+      const fb = document.getElementById('logoFallback');
+      const imgEl = document.createElement('img');
+      imgEl.src = img.src;
+      imgEl.style.width = '64px';
+      imgEl.style.height = '64px';
+      imgEl.style.objectFit = 'contain';
+      fb.parentNode.replaceChild(imgEl, fb);
+    };
+    img.src = './assets/logo.png';
+
+    // Cycle loading messages
+    const messages = ['Starting up…', 'Loading resources…', 'Almost ready…'];
+    const status = document.querySelector('.status');
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % messages.length;
+      status.textContent = messages[i];
+    }, 900);
+  </script>
 </body>
 </html>

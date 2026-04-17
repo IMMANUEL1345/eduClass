@@ -1,8 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  getDbConfig:  ()    => ipcRenderer.invoke('get-db-config'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  getAppInfo:   ()    => ipcRenderer.invoke('get-app-info'),
   platform:     process.platform,
   isDesktop:    true,
 });
