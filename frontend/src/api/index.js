@@ -64,14 +64,16 @@ export const authAPI = {
 };
 
 export const studentAPI = {
-  list:       (params) => api.get('/students', { params }),
-  create:     (body)   => api.post('/students', body),
-  getOne:     (id)     => api.get(`/students/${id}`),
-  update:     (id, b)  => api.put(`/students/${id}`, b),
-  remove:     (id)     => api.delete(`/students/${id}`),
-  grades:     (id, p)  => api.get(`/students/${id}/grades`, { params: p }),
-  attendance: (id, p)  => api.get(`/students/${id}/attendance`, { params: p }),
-  reports:    (id)     => api.get(`/students/${id}/reports`),
+  list:        (params)   => api.get('/students', { params }),
+  create:      (body)     => api.post('/students', body),
+  bulkCreate:  (students) => api.post('/students/bulk', { students }),
+  myChildren:  ()         => api.get('/students/my-children'),
+  getOne:      (id)       => api.get(`/students/${id}`),
+  update:      (id, b)    => api.put(`/students/${id}`, b),
+  remove:      (id)       => api.delete(`/students/${id}`),
+  grades:      (id, p)    => api.get(`/students/${id}/grades`, { params: p }),
+  attendance:  (id, p)    => api.get(`/students/${id}/attendance`, { params: p }),
+  reports:     (id)       => api.get(`/students/${id}/reports`),
 };
 
 export const teacherAPI = {
@@ -131,6 +133,7 @@ export const analyticsAPI = {
 
 export const commsAPI = {
   inbox:              ()      => api.get('/messages/inbox'),
+  searchUsers:        (q)     => api.get('/users/search', { params: { q } }),
   sent:               ()      => api.get('/messages/sent'),
   send:               (body)  => api.post('/messages', body),
   getMessage:         (id)    => api.get(`/messages/${id}`),
@@ -195,4 +198,14 @@ export const timetableAPI = {
   listAssignments:   (params) => api.get('/timetable/assignments', { params }),
   assign:            (body)   => api.post('/timetable/assignments', body),
   removeAssignment:  (id)     => api.delete(`/timetable/assignments/${id}`),
+};
+
+export const staffAttendanceAPI = {
+  checkIn:      ()       => api.post('/staff-attendance/check-in'),
+  checkOut:     ()       => api.post('/staff-attendance/check-out'),
+  today:        ()       => api.get('/staff-attendance/today'),
+  myHistory:    (params) => api.get('/staff-attendance/my-history', { params }),
+  daily:        (params) => api.get('/staff-attendance/daily', { params }),
+  report:       (params) => api.get('/staff-attendance/report', { params }),
+  manual:       (body)   => api.post('/staff-attendance/manual', body),
 };

@@ -1,7 +1,7 @@
 const { pool } = require('../config/db');
 const { success, created, notFound, serverError, error } = require('../utils/response');
 const { paginate } = require('../utils/helpers');
-const { sendAnnouncementEmail } = require('../utils/mailer');
+const { sendAnnouncementEmail, sendMessageEmail } = require('../utils/mailer');
 
 async function inbox(req, res) {
   const { limit, offset } = paginate(req.query);
@@ -45,6 +45,14 @@ async function send(req, res) {
       'INSERT INTO notifications (user_id,type,title,body) VALUES ($1,$2,$3,$4)',
       [receiver_id, 'message', `New message from ${req.user.name}`, subject]
     );
+    // Send email notification to receiver
+    const { rows: [receiver] } = await pool.query(
+      'SELECT email, name FROM users WHERE id = $1', [receiver_id]
+    );
+    if (receiver) {
+      sendMessageEmail(receiver.email, receiver.name, req.user.name, subject, body)
+        .catch(console.error);
+    }
     return created(res, { id: r.id }, 'Message sent');
   } catch (err) { return serverError(res, err); }
 }

@@ -53,6 +53,8 @@ const NAV = {
     { to: '/inventory/pos',    label: 'POS Terminal'     },
     { to: '/inventory/sales',  label: 'Sales history'    },
     { to: '/check-in',         label: 'Check in/out'     },
+    { to: '/messages',         label: 'Messages'         },
+    { to: '/announcements',    label: 'Announcements'    },
     { to: '/settings',         label: 'Settings'         },
   ],
   admissions_officer: [

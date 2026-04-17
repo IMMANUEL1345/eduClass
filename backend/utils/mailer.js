@@ -175,6 +175,27 @@ async function sendAbsenceAlert(parentEmail, parentName, studentName, date, subj
   });
 }
 
+
+// ── 7. Direct message email notification ─────────────────
+async function sendMessageEmail(to, recipientName, senderName, subject, body) {
+  const appUrl = `${process.env.APP_URL}/messages`;
+  await sendMail({
+    to,
+    subject: `New message from ${senderName}: ${subject}`,
+    html: baseTemplate(`
+      <p class="title">You have a new message</p>
+      <p class="subtitle">From ${senderName}</p>
+      <div class="card">
+        <div class="card-row"><span class="card-label">Subject</span><span class="card-value">${subject}</span></div>
+      </div>
+      <p class="text" style="white-space:pre-wrap">${body}</p>
+      <a href="${appUrl}" class="btn">Reply in EduClass</a>
+      <hr class="divider">
+      <p class="text" style="color:#aaa;font-size:13px">Log in to EduClass to view and reply to this message.</p>
+    `),
+  });
+}
+
 module.exports = {
   sendMail,
   sendWelcomeEmail,
@@ -183,4 +204,5 @@ module.exports = {
   sendAnnouncementEmail,
   sendPasswordReset,
   sendAbsenceAlert,
+  sendMessageEmail,
 };
