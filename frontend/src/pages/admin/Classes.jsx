@@ -88,6 +88,16 @@ export default function Classes() {
     } finally { setSaving(false); }
   }
 
+  async function deleteClass(cls) {
+    if (!window.confirm(`Delete ${cls.name} ${cls.section}? This cannot be undone.`)) return;
+    try {
+      await classAPI.remove(cls.id);
+      toast.success('Class deleted');
+      if (selected?.id === cls.id) setSelected(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to delete class'); }
+  }
+
   async function removeSubject(subjectId) {
     if (!window.confirm('Remove this subject?')) return;
     try {
@@ -104,6 +114,14 @@ export default function Classes() {
     { key: 'homeroom_teacher', label: 'Teacher',  width: '160px', render: v => v || '—' },
     { key: 'student_count',    label: 'Students', width: '90px',
       render: v => <Badge color="purple">{v ?? 0}</Badge> },
+    { key: 'actions', label: '', width: '60px',
+      render: (_, row) => (
+        <button
+          onClick={e => { e.stopPropagation(); deleteClass(row); }}
+          className="text-xs text-red-400 hover:text-red-600 hover:underline">
+          Delete
+        </button>
+      )},
   ];
 
   return (

@@ -92,6 +92,7 @@ export const classAPI = {
   update:        (id, b)  => api.put(`/classes/${id}`, b),
   students:      (id)     => api.get(`/classes/${id}/students`),
   subjects:      (id)     => api.get(`/classes/${id}/subjects`),
+  remove:        (id)     => api.delete(`/classes/${id}`),
   createSubject: (body)   => api.post('/subjects', body),
   removeSubject: (id)     => api.delete(`/subjects/${id}`),
 };

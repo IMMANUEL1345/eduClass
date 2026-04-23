@@ -1,78 +1,101 @@
 {
   "name": "educlass-desktop",
   "version": "1.0.0",
-  "description": "EduClass — School Management System Desktop App",
+  "description": "EduClass \u2014 School Management System",
   "main": "main.js",
-  "author": {
-    "name": "Maxpella Geraldo",
-    "email": "boanergekofi@gmail.com"
-  },
+  "author": "Maxpella Geraldo",
   "license": "MIT",
   "scripts": {
-    "start":       "electron .",
-    "dev":         "NODE_ENV=development electron .",
-    "build:win":   "electron-builder --win",
-    "build:mac":   "electron-builder --mac",
+    "dev": "NODE_ENV=development electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
     "postinstall": "electron-builder install-app-deps"
   },
-  "dependencies": {},
+  "dependencies": {
+    "electron-is-dev": "^3.0.0"
+  },
   "devDependencies": {
-    "electron":         "^28.1.0",
+    "electron": "^28.1.0",
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId":       "com.educlass.bsc.app",
+    "appId": "com.educlass.app",
     "productName": "EduClass",
-    "copyright":   "Maxpella Geraldo — Faculty of Engineering, BSc IT",
-
-    "directories": {
-      "output": "dist"
-    },
-
-    "files": [
-      "main.js",
-      "preload.js",
-      "splash.html",
-      "offline.html",
-      "assets/**/*"
+    "copyright": "Faculty of Engineering \u2014 BSc IT",
+    "icon": "assets/icon",
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!node_modules"
+        ]
+      },
+      {
+        "from": "../frontend/build",
+        "to": "frontend/build"
+      }
     ],
-
+    "extraFiles": [
+      {
+        "from": "../backend/node_modules",
+        "to": "resources/backend/node_modules"
+      }
+    ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
-
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "EduClass",
       "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",
-      "license": "LICENSE.txt",
-      "installerSidebar": "assets/installer-sidebar.bmp",
-      "deleteAppDataOnUninstall": false
+      "shortcutName": "EduClass"
     },
-
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "assets/icon.icns",
       "category": "public.app-category.education"
     },
-
+    "dmg": {
+      "title": "Install EduClass",
+      "background": "assets/dmg-bg.png",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "assets/icon.png",
       "category": "Education"
     },
-
     "publish": null
   }
 }
