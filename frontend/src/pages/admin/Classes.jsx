@@ -14,6 +14,8 @@ export default function Classes() {
   const [students,  setStudents]  = useState([]);
   const [tab,       setTab]       = useState('subjects'); // 'subjects' | 'students'
   const [showClass, setShowClass] = useState(false);
+  const [editClass,  setEditClass]  = useState(null);
+  const [editForm,   setEditForm]   = useState({ name:'', section:'', academic_year:'', homeroom_teacher_id:'' });
   const [showSubj,  setShowSubj]  = useState(false);
   const [saving,    setSaving]    = useState(false);
 
@@ -98,6 +100,29 @@ export default function Classes() {
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to delete class'); }
   }
 
+  function openEdit(cls, e) {
+    e.stopPropagation();
+    setEditClass(cls);
+    setEditForm({
+      name:                cls.name,
+      section:             cls.section,
+      academic_year:       cls.academic_year,
+      homeroom_teacher_id: cls.homeroom_teacher_id || '',
+    });
+  }
+
+  async function handleEditClass(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await classAPI.update(editClass.id, editForm);
+      toast.success('Class updated');
+      setEditClass(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update'); }
+    finally { setSaving(false); }
+  }
+
   async function removeSubject(subjectId) {
     if (!window.confirm('Remove this subject?')) return;
     try {
@@ -114,13 +139,20 @@ export default function Classes() {
     { key: 'homeroom_teacher', label: 'Teacher',  width: '160px', render: v => v || '—' },
     { key: 'student_count',    label: 'Students', width: '90px',
       render: v => <Badge color="purple">{v ?? 0}</Badge> },
-    { key: 'actions', label: '', width: '60px',
+    { key: 'actions', label: '', width: '100px',
       render: (_, row) => (
-        <button
-          onClick={e => { e.stopPropagation(); deleteClass(row); }}
-          className="text-xs text-red-400 hover:text-red-600 hover:underline">
-          Delete
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={e => openEdit(row, e)}
+            className="text-xs text-blue-500 hover:text-blue-700 hover:underline">
+            Edit
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); deleteClass(row); }}
+            className="text-xs text-red-400 hover:text-red-600 hover:underline">
+            Delete
+          </button>
+        </div>
       )},
   ];
 
@@ -270,6 +302,36 @@ export default function Classes() {
               <div className="flex justify-end gap-3 mt-2">
                 <Button type="button" onClick={() => setShowSubj(false)}>Cancel</Button>
                 <Button type="submit" variant="primary" loading={saving}>Add subject</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit class modal */}
+      {editClass && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <h2 className="text-base font-medium text-gray-800 mb-1">Edit class</h2>
+            <p className="text-xs text-gray-400 mb-5">{editClass.name} {editClass.section}</p>
+            <form onSubmit={handleEditClass} className="flex flex-col gap-3">
+              <Input label="Class name *" value={editForm.name}
+                onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+              <Input label="Section" value={editForm.section}
+                onChange={e => setEditForm(p => ({ ...p, section: e.target.value }))} />
+              <Input label="Academic year *" value={editForm.academic_year}
+                onChange={e => setEditForm(p => ({ ...p, academic_year: e.target.value }))} />
+              <Select label="Homeroom teacher"
+                value={editForm.homeroom_teacher_id}
+                onChange={e => setEditForm(p => ({ ...p, homeroom_teacher_id: e.target.value }))}>
+                <option value="">None</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.user_id || t.id}>{t.name}</option>
+                ))}
+              </Select>
+              <div className="flex justify-end gap-3 mt-2">
+                <Button type="button" onClick={() => setEditClass(null)}>Cancel</Button>
+                <Button type="submit" variant="primary" loading={saving}>Save changes</Button>
               </div>
             </form>
           </div>
