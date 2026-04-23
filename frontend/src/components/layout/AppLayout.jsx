@@ -66,6 +66,25 @@ const NAV = {
     { to: '/announcements',    label: 'Announcements'    },
     { to: '/settings',         label: 'Settings'         },
   ],
+  headmaster: [
+    { to: '/dashboard',        label: 'Dashboard'        },
+    { to: '/users',            label: 'Staff management' },
+    { to: '/admissions/list',  label: 'Admissions'       },
+    { to: '/students',         label: 'Students'         },
+    { to: '/teachers',         label: 'Teachers'         },
+    { to: '/classes',          label: 'Classes'          },
+    { to: '/attendance',       label: 'Attendance'       },
+    { to: '/grades',           label: 'Grades'           },
+    { to: '/reports',          label: 'Reports'          },
+    { to: '/analytics',        label: 'Analytics'        },
+    { to: '/fees',             label: 'Fees (view)'      },
+    { to: '/expenses',         label: 'Expenses'         },
+    { to: '/staff-attendance', label: 'Staff attendance' },
+    { to: '/check-in',         label: 'Check in/out'     },
+    { to: '/messages',         label: 'Messages'         },
+    { to: '/announcements',    label: 'Announcements'    },
+    { to: '/settings',         label: 'Settings'         },
+  ],
   parent: [
     { to: '/dashboard',        label: 'Dashboard'        },
     { to: '/my-child',         label: 'My child'         },
@@ -92,6 +111,7 @@ const ROLE_COLOR = {
   accountant:          'bg-amber-100 text-amber-700',
   cashier:             'bg-orange-100 text-orange-700',
   admissions_officer:  'bg-indigo-100 text-indigo-700',
+  headmaster:          'bg-emerald-100 text-emerald-700',
 };
 
 export default function AppLayout() {

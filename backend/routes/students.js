@@ -5,8 +5,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-const ENROLL_ROLES = ['admin', 'admissions_officer'];
-const VIEW_ROLES   = ['admin', 'teacher', 'admissions_officer'];
+const ENROLL_ROLES = ['admin', 'admissions_officer', 'headmaster'];
+const VIEW_ROLES   = ['admin', 'teacher', 'admissions_officer', 'headmaster'];
 
 router.get('/my-children',    authorize('parent'),                          ctrl.myChildren);
 router.get('/',               authorize(...VIEW_ROLES),                     ctrl.list);
@@ -17,6 +17,6 @@ router.put('/:id',            authorize(...ENROLL_ROLES),                   ctrl
 router.delete('/:id',         authorize('admin'),                           ctrl.remove);
 router.get('/:id/grades',     authorize(...VIEW_ROLES,'parent','student'),  ctrl.getGrades);
 router.get('/:id/attendance', authorize(...VIEW_ROLES,'parent'),            ctrl.getAttendance);
-router.get('/:id/reports',    authorize('admin','parent','student'),        ctrl.getReports);
+router.get('/:id/reports',    authorize('admin','parent','student','headmaster'), ctrl.getReports);
 
 module.exports = router;

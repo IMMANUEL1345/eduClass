@@ -66,6 +66,7 @@ function DashboardRedirect() {
   if (role === 'accountant')         return <AccountantDashboard />;
   if (role === 'cashier')            return <Navigate to="/inventory/pos" replace />;
   if (role === 'admissions_officer') return <Navigate to="/admissions" replace />;
+  if (role === 'headmaster')         return <AdminDashboard />;
   if (role === 'parent')             return <ParentDashboard />;
   if (role === 'student')            return <StudentDashboard />;
   return null;

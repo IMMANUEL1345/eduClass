@@ -33,12 +33,12 @@ router.get('/search', authenticate, async (req, res) => {
 });
 
 router.use(authenticate);
-router.use(authorize('admin'));
+router.use(authorize('admin', 'headmaster'));
 
 router.get('/',                        ctrl.list);
 router.post('/',                       ctrl.create);
 router.put('/:id',                     ctrl.update);
 router.post('/:id/reset-password',     ctrl.resetUserPassword);
-router.delete('/:id',                  ctrl.remove);
+router.delete('/:id',                  authorize('admin'), ctrl.remove);
 
 module.exports = router;

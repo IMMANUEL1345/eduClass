@@ -6,9 +6,9 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post('/',                    authorize('teacher'),            ctrl.submit);
-router.get('/',                     authorize('admin','teacher'),    ctrl.query);
+router.get('/',                     authorize('admin','teacher','headmaster'), ctrl.query);
 router.put('/:id',                  authorize('teacher','admin'),    ctrl.update);
 router.delete('/:id',               authorize('admin'),              ctrl.remove);
-router.get('/leaderboard/:classId', authorize('admin','teacher'),    ctrl.leaderboard);
+router.get('/leaderboard/:classId', authorize('admin','teacher','headmaster'), ctrl.leaderboard);
 
 module.exports = router;

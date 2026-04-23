@@ -5,7 +5,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-const ADMISSION_ROLES = ['admin', 'admissions_officer'];
+const ADMISSION_ROLES = ['admin', 'admissions_officer', 'headmaster'];
 
 router.get('/stats',   authorize(...ADMISSION_ROLES),    ctrl.stats);
 router.get('/',        authorize(...ADMISSION_ROLES),    ctrl.list);

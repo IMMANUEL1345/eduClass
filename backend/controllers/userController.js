@@ -3,7 +3,8 @@ const { pool } = require('../config/db');
 const { success, created, error, notFound, serverError } = require('../utils/response');
 const { sendWelcomeEmail } = require('../utils/mailer');
 
-const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant', 'cashier', 'admissions_officer'];
+const VALID_ROLES = ['admin', 'teacher', 'parent', 'student', 'accountant', 'cashier', 'admissions_officer', 'headmaster'];
+const HEADMASTER_ALLOWED_ROLES = ['teacher', 'accountant', 'cashier', 'admissions_officer'];
 
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
@@ -30,6 +31,9 @@ async function create(req, res) {
   const { name, email, role, phone, specialization, password } = req.body;
   if (!name || !email || !role) return error(res, 'Name, email and role are required');
   if (!VALID_ROLES.includes(role)) return error(res, `Role must be one of: ${VALID_ROLES.join(', ')}`);
+  if (req.user.role === 'headmaster' && !HEADMASTER_ALLOWED_ROLES.includes(role)) {
+    return error(res, `As Headmaster you can only create: ${HEADMASTER_ALLOWED_ROLES.join(', ')}`);
+  }
 
   const client = await pool.connect();
   try {
@@ -115,6 +119,7 @@ async function resetUserPassword(req, res) {
 
 async function remove(req, res) {
   if (req.user.id === parseInt(req.params.id)) return error(res, 'You cannot delete your own account');
+  if (req.user.role === 'headmaster') return error(res, 'Headmasters cannot delete accounts. Contact admin.');
   try {
     const { rows } = await pool.query('SELECT id, role FROM users WHERE id = $1', [req.params.id]);
     if (!rows[0]) return notFound(res, 'User not found');
