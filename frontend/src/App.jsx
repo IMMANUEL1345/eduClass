@@ -51,6 +51,8 @@ import Expenses            from './pages/accountant/Expenses';
 import Inventory           from './pages/accountant/Inventory';
 import POS                 from './pages/accountant/POS';
 
+import Timetable from './pages/admin/Timetable';
+
 // Admissions
 import AdmissionsDashboard from './pages/admissions/Dashboard';
 import AdmissionsList      from './pages/admissions/AdmissionsList';
@@ -105,6 +107,7 @@ function AppRoutes() {
           <Route path="/teachers"            element={<Teachers />} />
           <Route path="/classes"             element={<Classes />} />
           <Route path="/analytics"           element={<Analytics />} />
+          <Route path="/timetable"           element={<Timetable />} />
 
           {/* Academic */}
           <Route path="/attendance"          element={<TeacherAttendance />} />

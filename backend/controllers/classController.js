@@ -76,8 +76,11 @@ async function getStudents(req, res) {
 async function getSubjects(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT sub.id, sub.name, sub.code, sub.periods_per_week, u.name AS teacher_name
-       FROM subjects sub LEFT JOIN users u ON u.id = sub.teacher_id
+      `SELECT sub.id, sub.name, sub.code, sub.periods_per_week,
+              u.name AS teacher_name, sub.teacher_id
+       FROM subjects sub
+       LEFT JOIN teachers t ON t.id = sub.teacher_id
+       LEFT JOIN users u    ON u.id = t.user_id
        WHERE sub.class_id = $1 ORDER BY sub.name`, [req.params.id]
     );
     return success(res, rows);
@@ -93,7 +96,9 @@ async function listSubjects(req, res) {
     const { rows } = await pool.query(
       `SELECT sub.id, sub.name, sub.code, sub.periods_per_week,
               c.name AS class_name, u.name AS teacher_name
-       FROM subjects sub JOIN classes c ON c.id = sub.class_id LEFT JOIN users u ON u.id = sub.teacher_id
+       FROM subjects sub JOIN classes c ON c.id = sub.class_id
+       LEFT JOIN teachers t ON t.id = sub.teacher_id
+       LEFT JOIN users u    ON u.id = t.user_id
        WHERE ${conditions.join(' AND ')} ORDER BY c.name, sub.name`, params
     );
     return success(res, rows);

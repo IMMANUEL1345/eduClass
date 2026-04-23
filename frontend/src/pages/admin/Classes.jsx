@@ -262,7 +262,7 @@ export default function Classes() {
               <Input label="Code"           value={subjForm.code} onChange={e => setSubjForm(p => ({ ...p, code: e.target.value }))} placeholder="MATH101" />
               <Select label="Assign teacher" value={subjForm.teacher_id} onChange={e => setSubjForm(p => ({ ...p, teacher_id: e.target.value }))}>
                 <option value="">No teacher yet</option>
-                {teachers.map(t => <option key={t.id} value={t.user_id || t.id}>{t.name}</option>)}
+                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </Select>
               <Input label="Periods per week" type="number" min="1" max="10"
                 value={subjForm.periods_per_week}

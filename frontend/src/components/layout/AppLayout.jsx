@@ -12,6 +12,7 @@ const NAV = {
     { to: '/students',         label: 'Students'         },
     { to: '/teachers',         label: 'Teachers'         },
     { to: '/classes',          label: 'Classes'          },
+    { to: '/timetable',        label: 'Timetable'        },
     { to: '/attendance',       label: 'Attendance'       },
     { to: '/grades',           label: 'Grades'           },
     { to: '/reports',          label: 'Reports'          },
@@ -26,6 +27,7 @@ const NAV = {
   ],
   teacher: [
     { to: '/dashboard',        label: 'Dashboard'        },
+    { to: '/timetable',        label: 'Timetable'        },
     { to: '/check-in',         label: 'Check in/out'     },
     { to: '/attendance',       label: 'Attendance'       },
     { to: '/grades',           label: 'Grades'           },
@@ -73,6 +75,7 @@ const NAV = {
     { to: '/students',         label: 'Students'         },
     { to: '/teachers',         label: 'Teachers'         },
     { to: '/classes',          label: 'Classes'          },
+    { to: '/timetable',        label: 'Timetable'        },
     { to: '/attendance',       label: 'Attendance'       },
     { to: '/grades',           label: 'Grades'           },
     { to: '/reports',          label: 'Reports'          },
