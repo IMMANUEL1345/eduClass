@@ -3,8 +3,8 @@ import api from '../../api';
 import { PageHeader, Card, Button, Input, Select, Badge, Spinner } from '../../components/ui';
 import toast from 'react-hot-toast';
 
-const ROLES      = ['admin','teacher','accountant','admissions_officer','cashier','parent','student'];
-const ROLE_COLOR = { admin:'blue', teacher:'teal', accountant:'amber', parent:'pink', student:'purple', cashier:'orange', admissions_officer:'indigo' };
+const ROLES      = ['admin','headmaster','teacher','accountant','admissions_officer','cashier','parent','student'];
+const ROLE_COLOR = { admin:'blue', headmaster:'green', teacher:'teal', accountant:'amber', parent:'pink', student:'purple', cashier:'orange', admissions_officer:'indigo' };
 
 function ActionMenu({ user, onDeactivate, onActivate, onResetPw, onDelete }) {
   const [open, setOpen] = useState(false);
