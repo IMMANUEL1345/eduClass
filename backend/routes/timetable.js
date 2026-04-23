@@ -1,20 +1,26 @@
 const express = require('express');
-const ctrl = require('../controllers/timetableController');
+const ctrl    = require('../controllers/timetableController');
 const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authenticate);
 
-const ALL_ROLES = ['admin', 'teacher', 'student', 'parent', 'accountant', 'cashier', 'admissions_officer'];
+const ALL   = ['admin','teacher','student','parent','accountant','cashier','admissions_officer','headmaster'];
+const MANAGE = ['admin','headmaster'];
 
-router.get('/class',         authorize(...ALL_ROLES),          ctrl.getClassTimetable);
-router.get('/teacher',       authorize(...ALL_ROLES),          ctrl.getTeacherTimetable);
-router.post('/',             authorize('admin'),               ctrl.addEntry);
-router.put('/:id',           authorize('admin'),               ctrl.updateEntry);
-router.delete('/:id',        authorize('admin'),               ctrl.removeEntry);
+router.get('/class',              authorize(...ALL),    ctrl.getClassTimetable);
+router.get('/teacher',            authorize(...ALL),    ctrl.getTeacherTimetable);
 
-router.get('/assignments',   authorize('admin', 'teacher'),   ctrl.listAssignments);
-router.post('/assignments',  authorize('admin'),               ctrl.assign);
-router.delete('/assignments/:id', authorize('admin'),         ctrl.removeAssignment);
+router.post('/generate',          authorize(...MANAGE), ctrl.generateTimetable);
+router.post('/regenerate',        authorize(...MANAGE), ctrl.regenerateTimetable);
+router.post('/approve',           authorize(...MANAGE), ctrl.approveTimetable);
+
+router.post('/',                  authorize(...MANAGE), ctrl.addEntry);
+router.put('/:id',                authorize(...MANAGE), ctrl.updateEntry);
+router.delete('/:id',             authorize(...MANAGE), ctrl.removeEntry);
+
+router.get('/assignments',        authorize('admin','teacher','headmaster'), ctrl.listAssignments);
+router.post('/assignments',       authorize(...MANAGE), ctrl.assign);
+router.delete('/assignments/:id', authorize(...MANAGE), ctrl.removeAssignment);
 
 module.exports = router;
