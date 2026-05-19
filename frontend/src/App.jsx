@@ -51,7 +51,8 @@ import Expenses            from './pages/accountant/Expenses';
 import Inventory           from './pages/accountant/Inventory';
 import POS                 from './pages/accountant/POS';
 
-import Timetable           from './pages/admin/Timetable';
+import Timetable                  from './pages/admin/Timetable';
+import SubjectTeacherAssignment   from './pages/admin/SubjectTeacherAssignment';
 import TeacherAssignments  from './pages/teacher/Assignments';
 import StudentAssignments  from './pages/student/Assignments';
 import ParentAssignments   from './pages/parent/Assignments';
@@ -117,7 +118,8 @@ function AppRoutes() {
           <Route path="/teachers"            element={<Teachers />} />
           <Route path="/classes"             element={<Classes />} />
           <Route path="/analytics"           element={<Analytics />} />
-          <Route path="/timetable"           element={<Timetable />} />
+          <Route path="/timetable"                element={<Timetable />} />
+          <Route path="/subject-assignments"     element={<SubjectTeacherAssignment />} />
 
           {/* Assignments — role-aware */}
           <Route path="/assignments"           element={<AssignmentsRoute />} />

@@ -93,8 +93,9 @@ export const classAPI = {
   students:      (id)     => api.get(`/classes/${id}/students`),
   subjects:      (id)     => api.get(`/classes/${id}/subjects`),
   remove:        (id)     => api.delete(`/classes/${id}`),
-  createSubject: (body)   => api.post('/subjects', body),
-  removeSubject: (id)     => api.delete(`/subjects/${id}`),
+  createSubject:  (body)   => api.post('/subjects', body),
+  updateSubject:  (id, b)  => api.put(`/subjects/${id}`, b),
+  removeSubject:  (id)     => api.delete(`/subjects/${id}`),
 };
 
 export const attendanceAPI = {
