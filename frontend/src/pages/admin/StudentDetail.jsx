@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { studentAPI, feeAPI } from '../../api';
+import api from '../../api';
 import { useSelector } from 'react-redux';
 import { selectRole } from '../../store/slices/authSlice';
 import {
@@ -10,7 +11,7 @@ import { gradeColor } from '../../utils/grades';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
-const TABS = ['overview', 'grades', 'attendance', 'reports', 'fees'];
+const TABS = ['overview', 'grades', 'attendance', 'reports', 'fees', 'parents'];
 
 export default function StudentDetail() {
   const { id }   = useParams();
@@ -21,7 +22,13 @@ export default function StudentDetail() {
   const [grades,     setGrades]     = useState([]);
   const [attendance, setAttendance] = useState(null);
   const [reports,    setReports]    = useState([]);
-  const [feeBalance, setFeeBalance] = useState([]);
+  const [feeBalance,  setFeeBalance]  = useState([]);
+  const [parents,     setParents]     = useState([]);
+  const [showLink,    setShowLink]    = useState(false);
+  const [parentSearch,setParentSearch]= useState('');
+  const [searchRes,   setSearchRes]   = useState([]);
+  const [searching,   setSearching]   = useState(false);
+  const [linking,     setLinking]     = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [tab,        setTab]        = useState('overview');
 
@@ -42,11 +49,46 @@ export default function StudentDetail() {
         if (role === 'admin' || role === 'accountant') {
           feeAPI.studentBalance(id, {}).then(({ data: fb }) => setFeeBalance(fb.data)).catch(() => {});
         }
+        if (role === 'admin' || role === 'headmaster') {
+          api.get(`/students/${id}/parents`).then(({ data }) => setParents(data.data)).catch(() => {});
+        }
       } catch { toast.error('Failed to load student'); }
       finally { setLoading(false); }
     }
     load();
   }, [id, role]);
+
+  async function searchParents(q) {
+    if (q.length < 2) { setSearchRes([]); return; }
+    setSearching(true);
+    try {
+      const { data } = await api.get('/users/search', { params: { q } });
+      setSearchRes((data.data || []).filter(u => u.role === 'parent'));
+    } catch {} finally { setSearching(false); }
+  }
+
+  async function handleLink(parentUserId) {
+    setLinking(true);
+    try {
+      await api.post(`/students/${id}/link-parent`, { parent_user_id: parentUserId });
+      toast.success('Parent linked successfully');
+      const { data } = await api.get(`/students/${id}/parents`);
+      setParents(data.data);
+      setShowLink(false);
+      setParentSearch('');
+      setSearchRes([]);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to link parent'); }
+    finally { setLinking(false); }
+  }
+
+  async function handleUnlink(parentId, parentName) {
+    if (!window.confirm(`Remove ${parentName} as parent of ${student?.name}?`)) return;
+    try {
+      await api.delete(`/students/${id}/unlink-parent/${parentId}`);
+      toast.success('Parent unlinked');
+      setParents(prev => prev.filter(p => p.parent_id !== parentId));
+    } catch { toast.error('Failed to unlink'); }
+  }
 
   const avgScore = grades.length
     ? Math.round(grades.reduce((s, g) => s + parseFloat(g.score), 0) / grades.length)
@@ -75,9 +117,11 @@ export default function StudentDetail() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!student) return <div className="text-center py-20 text-gray-400">Student not found</div>;
 
-  const showTabs = role === 'admin' || role === 'accountant'
-    ? TABS
-    : TABS.filter(t => t !== 'fees');
+  const showTabs = TABS.filter(t => {
+    if (t === 'fees')    return role === 'admin' || role === 'accountant';
+    if (t === 'parents') return role === 'admin' || role === 'headmaster';
+    return true;
+  });
 
   return (
     <div>
@@ -195,6 +239,88 @@ export default function StudentDetail() {
               ))
           }
         </Card>
+      )}
+
+      {/* Parents */}
+      {tab === 'parents' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-700">Linked parents / guardians</h3>
+            <Button variant="primary" onClick={() => setShowLink(true)}>+ Link parent</Button>
+          </div>
+          <Card>
+            {parents.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-gray-400 text-sm mb-2">No parents linked yet</p>
+                <p className="text-xs text-gray-300">Click "Link parent" to connect this student to their parent's account</p>
+              </div>
+            ) : (
+              parents.map(p => (
+                <div key={p.parent_id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center text-xs font-medium">
+                      {p.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.email}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleUnlink(p.parent_id, p.name)}
+                    className="text-xs text-red-400 hover:text-red-600 hover:underline">
+                    Unlink
+                  </button>
+                </div>
+              ))
+            )}
+          </Card>
+
+          {/* Link parent modal */}
+          {showLink && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                <h2 className="text-base font-medium text-gray-800 mb-1">Link parent</h2>
+                <p className="text-xs text-gray-400 mb-4">Search for the parent's account to link to {student?.name}</p>
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search parent by name or email…"
+                    value={parentSearch}
+                    onChange={e => { setParentSearch(e.target.value); searchParents(e.target.value); }}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg pr-8
+                               focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  {searching && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  )}
+                </div>
+                {searchRes.length > 0 && (
+                  <div className="border border-gray-100 rounded-xl overflow-hidden mb-3 max-h-48 overflow-y-auto">
+                    {searchRes.map(u => (
+                      <button key={u.id} onClick={() => handleLink(u.id)}
+                        disabled={linking}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0">
+                        <p className="text-sm font-medium text-gray-700">{u.name}</p>
+                        <p className="text-xs text-gray-400">{u.email}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {parentSearch.length >= 2 && searchRes.length === 0 && !searching && (
+                  <p className="text-sm text-gray-400 text-center py-3">
+                    No parent accounts found. Make sure a parent account exists first.
+                  </p>
+                )}
+                <div className="flex justify-end">
+                  <Button onClick={() => { setShowLink(false); setParentSearch(''); setSearchRes([]); }}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Fees */}

@@ -26,7 +26,8 @@ const admissionRoutes   = require('./routes/admissions');
 const inventoryRoutes   = require('./routes/inventory');
 const expenseRoutes     = require('./routes/expenses');
 const timetableRoutes       = require('./routes/timetable');
-const staffAttendanceRoutes = require('./routes/staffAttendance');
+const staffAttendanceRoutes  = require('./routes/staffAttendance');
+const assignmentRoutes       = require('./routes/assignments');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +51,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (_, res) => res.json({ ok: true, env: process.env.NODE_ENV, timestamp: new Date() }));
+
+// ── Keep-alive (prevents Render free tier sleeping) ──────
+// Pings itself every 14 minutes so the server stays warm
+if (process.env.NODE_ENV === 'production') {
+  const https = require('https');
+  setInterval(() => {
+    const apiUrl = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL?.replace('vercel.app', 'onrender.com');
+    if (apiUrl) {
+      https.get(`${apiUrl.replace('edu-class-pi.vercel.app','educlass-api.onrender.com')}/health`, (res) => {
+        console.log(`Keep-alive ping: ${res.statusCode}`);
+      }).on('error', () => {});
+    }
+  }, 14 * 60 * 1000);
+}
 
 app.get('/test-mail', async (req, res) => {
   try {
@@ -79,6 +94,7 @@ app.use('/api/inventory',   inventoryRoutes);
 app.use('/api/expenses',    expenseRoutes);
 app.use('/api/timetable',        timetableRoutes);
 app.use('/api/staff-attendance', staffAttendanceRoutes);
+app.use('/api/assignments',      assignmentRoutes);
 app.use('/api',             commsRoutes);
 
 if (process.env.DESKTOP_MODE === 'true') {

@@ -213,3 +213,16 @@ export const staffAttendanceAPI = {
   report:       (params) => api.get('/staff-attendance/report', { params }),
   manual:       (body)   => api.post('/staff-attendance/manual', body),
 };
+
+export const assignmentAPI = {
+  list:           (params)       => api.get('/assignments', { params }),
+  myList:         ()             => api.get('/assignments/my'),
+  childList:      (studentId)    => api.get(`/assignments/child/${studentId}`),
+  getOne:         (id)           => api.get(`/assignments/${id}`),
+  create:         (body)         => api.post('/assignments', body),
+  update:         (id, b)        => api.put(`/assignments/${id}`, b),
+  remove:         (id)           => api.delete(`/assignments/${id}`),
+  getSubmissions: (id)           => api.get(`/assignments/${id}/submissions`),
+  submit:         (id, body)     => api.post(`/assignments/${id}/submit`, body),
+  grade:          (id, subId, b) => api.put(`/assignments/${id}/submissions/${subId}/grade`, b),
+};

@@ -18,5 +18,8 @@ router.delete('/:id',         authorize('admin'),                           ctrl
 router.get('/:id/grades',     authorize(...VIEW_ROLES,'parent','student'),  ctrl.getGrades);
 router.get('/:id/attendance', authorize(...VIEW_ROLES,'parent'),            ctrl.getAttendance);
 router.get('/:id/reports',    authorize('admin','parent','student','headmaster'), ctrl.getReports);
+router.get('/:id/parents',    authorize('admin','headmaster'),                   ctrl.getParents);
+router.post('/:id/link-parent',   authorize('admin','headmaster'),               ctrl.linkParent);
+router.delete('/:id/unlink-parent/:parentId', authorize('admin','headmaster'),   ctrl.unlinkParent);
 
 module.exports = router;

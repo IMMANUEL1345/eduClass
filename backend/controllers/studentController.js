@@ -224,4 +224,56 @@ async function getReports(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
-module.exports = { list, create, bulkCreate, myChildren, getOne, update, remove, getGrades, getAttendance, getReports };
+
+// GET /api/students/:id/parents
+async function getParents(req, res) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id AS parent_id, u.id AS user_id, u.name, u.email, u.is_active
+       FROM parent_student ps
+       JOIN parents p ON p.id = ps.parent_id
+       JOIN users u   ON u.id = p.user_id
+       WHERE ps.student_id = $1
+       ORDER BY u.name`, [req.params.id]
+    );
+    return success(res, rows);
+  } catch (err) { return serverError(res, err); }
+}
+
+// POST /api/students/:id/link-parent
+async function linkParent(req, res) {
+  const { parent_user_id } = req.body;
+  if (!parent_user_id) return error(res, 'parent_user_id required');
+  try {
+    // Verify parent exists
+    const { rows: [p] } = await pool.query(
+      'SELECT p.id FROM parents p WHERE p.user_id = $1', [parent_user_id]
+    );
+    if (!p) return error(res, 'Parent record not found. Make sure the user has role "parent".');
+
+    // Check student exists
+    const { rows: [s] } = await pool.query(
+      'SELECT id FROM students WHERE id = $1', [req.params.id]
+    );
+    if (!s) return error(res, 'Student not found');
+
+    await pool.query(
+      'INSERT INTO parent_student (parent_id, student_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+      [p.id, req.params.id]
+    );
+    return success(res, {}, 'Parent linked to student successfully');
+  } catch (err) { return serverError(res, err); }
+}
+
+// DELETE /api/students/:id/unlink-parent/:parentId
+async function unlinkParent(req, res) {
+  try {
+    await pool.query(
+      'DELETE FROM parent_student WHERE student_id=$1 AND parent_id=$2',
+      [req.params.id, req.params.parentId]
+    );
+    return success(res, {}, 'Parent unlinked');
+  } catch (err) { return serverError(res, err); }
+}
+
+module.exports = { list, create, bulkCreate, myChildren, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };

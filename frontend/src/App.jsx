@@ -51,13 +51,23 @@ import Expenses            from './pages/accountant/Expenses';
 import Inventory           from './pages/accountant/Inventory';
 import POS                 from './pages/accountant/POS';
 
-import Timetable from './pages/admin/Timetable';
+import Timetable           from './pages/admin/Timetable';
+import TeacherAssignments  from './pages/teacher/Assignments';
+import StudentAssignments  from './pages/student/Assignments';
+import ParentAssignments   from './pages/parent/Assignments';
 
 // Admissions
 import AdmissionsDashboard from './pages/admissions/Dashboard';
 import AdmissionsList      from './pages/admissions/AdmissionsList';
 import NewAdmission        from './pages/admissions/NewAdmission';
 import AdmissionDetail     from './pages/admissions/AdmissionDetail';
+
+function AssignmentsRoute() {
+  const role = useSelector(selectRole);
+  if (role === 'student') return <StudentAssignments />;
+  if (role === 'parent')  return <ParentAssignments />;
+  return <TeacherAssignments />;
+}
 
 function DashboardRedirect() {
   const role        = useSelector(selectRole);
@@ -108,6 +118,9 @@ function AppRoutes() {
           <Route path="/classes"             element={<Classes />} />
           <Route path="/analytics"           element={<Analytics />} />
           <Route path="/timetable"           element={<Timetable />} />
+
+          {/* Assignments — role-aware */}
+          <Route path="/assignments"           element={<AssignmentsRoute />} />
 
           {/* Academic */}
           <Route path="/attendance"          element={<TeacherAttendance />} />
