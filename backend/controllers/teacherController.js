@@ -6,11 +6,12 @@ const { generateCode } = require('../utils/helpers');
 async function list(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT t.id, t.user_id, t.staff_number, t.specialization, t.phone, u.name, u.email, u.is_active,
-              COUNT(DISTINCT sub.id) AS subject_count
-       FROM teachers t JOIN users u ON u.id = t.user_id
-       LEFT JOIN subjects sub ON sub.teacher_id = t.id
-       GROUP BY t.id, u.name, u.email, u.is_active ORDER BY u.name`
+      `SELECT t.id, t.user_id, t.staff_number, t.specialization, t.phone,
+              u.name, u.email, u.is_active
+       FROM teachers t
+       JOIN users u ON u.id = t.user_id
+       WHERE u.is_active = TRUE
+       ORDER BY u.name`
     );
     return success(res, rows);
   } catch (err) { return serverError(res, err); }
@@ -40,7 +41,7 @@ async function create(req, res) {
 async function getOne(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT t.id, t.user_id, t.staff_number, t.specialization, t.phone, u.name, u.email, u.is_active, u.created_at
+      `SELECT t.id, t.staff_number, t.specialization, t.phone, u.name, u.email, u.is_active, u.created_at
        FROM teachers t JOIN users u ON u.id = t.user_id WHERE t.id = $1`, [req.params.id]
     );
     if (!rows[0]) return notFound(res, 'Teacher not found');
