@@ -76,7 +76,8 @@ async function getStudents(req, res) {
 async function getSubjects(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT sub.id, sub.name, sub.code, sub.periods_per_week, u.name AS teacher_name
+      `SELECT sub.id, sub.name, sub.code, sub.periods_per_week,
+              sub.teacher_id, u.name AS teacher_name
        FROM subjects sub LEFT JOIN users u ON u.id = sub.teacher_id
        WHERE sub.class_id = $1 ORDER BY sub.name`, [req.params.id]
     );
