@@ -7,10 +7,14 @@ async function list(req, res) {
   try {
     const { rows } = await pool.query(
       `SELECT t.id, t.user_id, t.staff_number, t.specialization, t.phone,
-              u.name, u.email, u.is_active
+              u.name, u.email, u.is_active,
+              COUNT(DISTINCT sub.id) AS subject_count
        FROM teachers t
        JOIN users u ON u.id = t.user_id
+       LEFT JOIN subjects sub ON sub.teacher_id = u.id
        WHERE u.is_active = TRUE
+       GROUP BY t.id, t.user_id, t.staff_number, t.specialization, t.phone,
+                u.name, u.email, u.is_active
        ORDER BY u.name`
     );
     return success(res, rows);
