@@ -7,8 +7,8 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/',        authorize('admin','teacher'), ctrl.listSubjects);
-router.post('/',       authorize('admin'),            ctrl.createSubject);
-router.put('/:id',     authorize('admin'),            ctrl.updateSubject);
-router.delete('/:id',  authorize('admin'),            ctrl.removeSubject);
+router.post('/',       authorize('admin','headmaster'), ctrl.createSubject);
+router.put('/:id',     authorize('admin','headmaster','teacher'), ctrl.updateSubject);
+router.delete('/:id',  authorize('admin','headmaster'), ctrl.removeSubject);
 
 module.exports = router;
