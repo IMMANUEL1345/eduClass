@@ -162,6 +162,63 @@ export default function SubjectTeacherAssignment() {
     }
   }
 
+  async function handleForceReassign() {
+    if (!window.confirm(
+      'Force reassign ALL subjects in all classes?\n\nThis will OVERWRITE existing assignments too.'
+    )) return;
+
+    setErrors([]);
+    setProgress({ total: 0, done: 0, msg: 'Loading classes…' });
+
+    try {
+      const { data: cls } = await classAPI.list({});
+      const allClasses = cls.data;
+
+      let total = 0;
+      const classSubjects = {};
+      for (const c of allClasses) {
+        const { data: s } = await api.get(`/classes/${c.id}/subjects`);
+        classSubjects[c.id] = { cls: c, subjects: s.data };
+        total += s.data.length; // ALL subjects, not just unassigned
+      }
+
+      setProgress({ total, done: 0, msg: `Force assigning ${total} subjects…` });
+
+      let done = 0; let assigned = 0;
+      const failList = [];
+
+      for (const { cls: c, subjects: subs } of Object.values(classSubjects)) {
+        for (const subj of subs) {
+          const match = matchTeacher(subj.name, teachers);
+          if (match) {
+            const userId = match.user_id;
+            if (userId) {
+              try {
+                await api.put(`/subjects/${subj.id}`, { teacher_id: userId });
+                assigned++;
+              } catch (err) {
+                failList.push(`${c.name}: ${subj.name} — ${err.response?.data?.message || err.message}`);
+              }
+            }
+          } else {
+            failList.push(`${c.name}: ${subj.name} — no matching teacher`);
+          }
+          done++;
+          setProgress({ total, done, assigned, msg: `Processing ${c.name} ${c.section}…` });
+        }
+      }
+
+      setErrors(failList);
+      setProgress(null);
+      toast.success(`Force assigned ${assigned} subjects. ${failList.length} unmatched.`);
+      if (selClass) loadSubjects(selClass);
+
+    } catch (err) {
+      setProgress(null);
+      toast.error('Force reassign failed: ' + err.message);
+    }
+  }
+
   const assigned   = subjects.filter(s => s.teacher_id).length;
   const unassigned = subjects.filter(s => !s.teacher_id).length;
   const selClassObj = classes.find(c => c.id === parseInt(selClass));
@@ -172,9 +229,14 @@ export default function SubjectTeacherAssignment() {
         title="Assign teachers to subjects"
         subtitle="Bulk auto-assign or review class by class"
         action={
-          <Button variant="primary" onClick={handleBulkAutoAssign} disabled={!!progress}>
-            {progress ? '⏳ Assigning…' : '⚡ Bulk auto-assign all classes'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleForceReassign} disabled={!!progress}>
+              🔄 Force reassign all
+            </Button>
+            <Button variant="primary" onClick={handleBulkAutoAssign} disabled={!!progress}>
+              {progress ? '⏳ Assigning…' : '⚡ Bulk auto-assign (new only)'}
+            </Button>
+          </div>
         }
       />
 
