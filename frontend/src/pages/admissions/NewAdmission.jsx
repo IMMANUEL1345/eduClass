@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
+import { classAPI } from '../../api';
 import { PageHeader, Card, Button, Input, Select } from '../../components/ui';
 import toast from 'react-hot-toast';
 
@@ -8,7 +9,12 @@ const CURRENT_YEAR = `${new Date().getFullYear()}/${new Date().getFullYear() + 1
 
 export default function NewAdmission() {
   const navigate = useNavigate();
-  const [saving, setSaving] = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [classes, setClasses] = useState([]);
+
+  useEffect(() => {
+    classAPI.list({}).then(({ data }) => setClasses(data.data)).catch(() => {});
+  }, []);
   const [form, setForm] = useState({
     applicant_name:'', email:'', phone:'', dob:'', gender:'',
     previous_school:'', class_applied:'', academic_year: CURRENT_YEAR,
@@ -55,7 +61,14 @@ export default function NewAdmission() {
         <Card>
           <h3 className="text-sm font-medium text-gray-700 mb-4">Enrollment details</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Class applying for *" value={form.class_applied} onChange={set('class_applied')} placeholder="e.g. JHS 1" />
+            <Select label="Class applying for *" value={form.class_applied} onChange={set('class_applied')}>
+              <option value="">Select class…</option>
+              {classes.map(c => (
+                <option key={c.id} value={`${c.name} ${c.section}`}>
+                  {c.name} {c.section}
+                </option>
+              ))}
+            </Select>
             <Input label="Academic year" value={form.academic_year} onChange={set('academic_year')} placeholder="2025/2026" />
           </div>
         </Card>

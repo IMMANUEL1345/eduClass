@@ -4,36 +4,34 @@ import api from '../../api';
 import { PageHeader, Card, Button, Select, Badge, Spinner } from '../../components/ui';
 import toast from 'react-hot-toast';
 
-// Keyword matching: subject name → specialization keywords
+// Match subject name → teacher specialization keywords
 const SPEC_MAP = {
   'English Language':            ['english language', 'english'],
   'Mathematics':                 ['mathematics'],
   'Integrated Science':          ['integrated science'],
   'Science':                     ['science & environmental', 'science'],
-  'Our World Our People':        ['environmental', 'science', 'owop'],
+  'Our World Our People':        ['science & environmental', 'environmental', 'science'],
   'Social Studies':              ['social studies'],
-  'History':                     ['history', 'social studies'],
+  'History':                     ['social studies', 'history'],
   'Ghanaian Language':           ['ghanaian language'],
   'Ghanaian Language & Culture': ['ghanaian language'],
-  'Religious & Moral Education': ['religious & moral', 'religious', 'moral'],
+  'Religious & Moral Education': ['religious & moral', 'religious'],
   'Creative Arts':               ['creative arts'],
   'Physical Education':          ['physical education'],
   'Computing (ICT)':             ['information technology', 'computing', 'ict'],
   'French':                      ['french'],
   'Design & Technology':         ['design & technology'],
-  'Language & Literacy':         ['early childhood', 'english language', 'english'],
+  'Language & Literacy':         ['early childhood', 'english language'],
   'Number Work':                 ['early childhood', 'mathematics'],
   'Environmental Studies':       ['early childhood', 'science & environmental'],
-  'Movement & Drama':            ['creative arts', 'physical education', 'early childhood'],
+  'Movement & Drama':            ['creative arts', 'early childhood'],
   'Social Development':          ['early childhood'],
   'Language Play':               ['early childhood'],
 };
 
 function matchTeacher(subjectName, teachers) {
   const keywords = SPEC_MAP[subjectName] ||
-    [subjectName.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim()];
-
-  // Priority: exact or first keyword match (most specific first)
+    [subjectName.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()];
   for (const kw of keywords) {
     const match = teachers.find(t =>
       (t.specialization || '').toLowerCase().includes(kw)
@@ -44,17 +42,18 @@ function matchTeacher(subjectName, teachers) {
 }
 
 export default function SubjectTeacherAssignment() {
-  const [classes,   setClasses]   = useState([]);
-  const [teachers,  setTeachers]  = useState([]);
-  const [subjects,  setSubjects]  = useState([]);
-  const [selClass,  setSelClass]  = useState('');
-  const [loading,   setLoading]   = useState(false);
-  const [saving,    setSaving]    = useState({});
-  const [progress,  setProgress]  = useState(null);
-  const [errors,    setErrors]    = useState([]);
+  const [classes,  setClasses]  = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selClass, setSelClass] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [saving,   setSaving]   = useState({});
+  const [progress, setProgress] = useState(null);
+  const [errors,   setErrors]   = useState([]);
 
   useEffect(() => {
     classAPI.list({}).then(({ data }) => setClasses(data.data)).catch(() => {});
+    // teacherAPI returns: { id: teacher_record_id, user_id, name, specialization, ... }
     teacherAPI.list({}).then(({ data }) => setTeachers(data.data)).catch(() => {});
   }, []);
 
@@ -70,20 +69,22 @@ export default function SubjectTeacherAssignment() {
 
   useEffect(() => { loadSubjects(selClass); }, [selClass, loadSubjects]);
 
-  async function assignTeacher(subjectId, teacherId) {
+  // subjects.teacher_id = users.id  → always use t.user_id when assigning
+  async function assignTeacher(subjectId, userIdValue) {
     setSaving(p => ({ ...p, [subjectId]: true }));
     try {
-      await api.put(`/subjects/${subjectId}`, { teacher_id: teacherId || null });
+      await api.put(`/subjects/${subjectId}`, { teacher_id: userIdValue || null });
+      const teacher = teachers.find(t => String(t.user_id) === String(userIdValue));
       setSubjects(prev => prev.map(s =>
         s.id === subjectId ? {
           ...s,
-          teacher_id:   teacherId ? parseInt(teacherId) : null,
-          teacher_name: teachers.find(t => t.id === parseInt(teacherId))?.name || null,
+          teacher_id:   userIdValue ? parseInt(userIdValue) : null,
+          teacher_name: teacher?.name || null,
         } : s
       ));
       toast.success('Teacher assigned');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to assign teacher');
+      toast.error(err.response?.data?.message || 'Failed to assign');
     } finally {
       setSaving(p => ({ ...p, [subjectId]: false }));
     }
@@ -91,8 +92,7 @@ export default function SubjectTeacherAssignment() {
 
   async function handleBulkAutoAssign() {
     if (!window.confirm(
-      'Auto-assign teachers to ALL unassigned subjects across all classes?\n\n' +
-      'Only subjects with no teacher will be updated.'
+      'Auto-assign teachers to ALL unassigned subjects?\n\nOnly subjects with no teacher will be updated.'
     )) return;
 
     setErrors([]);
@@ -102,33 +102,39 @@ export default function SubjectTeacherAssignment() {
       const { data: cls } = await classAPI.list({});
       const allClasses = cls.data;
 
-      // Count total unassigned subjects
+      // Pre-fetch all subjects
       let total = 0;
       const classSubjects = {};
       for (const c of allClasses) {
         const { data: s } = await api.get(`/classes/${c.id}/subjects`);
-        classSubjects[c.id] = s.data;
+        classSubjects[c.id] = { cls: c, subjects: s.data };
         total += s.data.filter(sub => !sub.teacher_id).length;
       }
 
-      setProgress({ total, done: 0, msg: `Found ${total} unassigned subjects across ${allClasses.length} classes…` });
+      setProgress({ total, done: 0, msg: `Found ${total} unassigned subjects…` });
 
       let done = 0;
       let assigned = 0;
       const failList = [];
 
-      for (const c of allClasses) {
-        const unassigned = classSubjects[c.id].filter(s => !s.teacher_id);
+      for (const { cls: c, subjects: subs } of Object.values(classSubjects)) {
+        const unassigned = subs.filter(s => !s.teacher_id);
 
         for (const subj of unassigned) {
           const match = matchTeacher(subj.name, teachers);
 
           if (match) {
-            try {
-              await api.put(`/subjects/${subj.id}`, { teacher_id: match.id });
-              assigned++;
-            } catch (err) {
-              failList.push(`${c.name}: ${subj.name} — ${err.response?.data?.message || err.message}`);
+            // IMPORTANT: use match.user_id — subjects.teacher_id references users.id
+            const userId = match.user_id;
+            if (!userId) {
+              failList.push(`${c.name}: ${subj.name} — teacher has no user_id`);
+            } else {
+              try {
+                await api.put(`/subjects/${subj.id}`, { teacher_id: userId });
+                assigned++;
+              } catch (err) {
+                failList.push(`${c.name}: ${subj.name} — ${err.response?.data?.message || err.message}`);
+              }
             }
           } else {
             failList.push(`${c.name}: ${subj.name} — no matching teacher found`);
@@ -145,7 +151,7 @@ export default function SubjectTeacherAssignment() {
       if (failList.length === 0) {
         toast.success(`✅ All ${assigned} subjects assigned successfully!`);
       } else {
-        toast.success(`Assigned ${assigned} subjects. ${failList.length} could not be matched.`);
+        toast.success(`Assigned ${assigned}. ${failList.length} could not be matched.`);
       }
 
       if (selClass) loadSubjects(selClass);
@@ -158,7 +164,7 @@ export default function SubjectTeacherAssignment() {
 
   const assigned   = subjects.filter(s => s.teacher_id).length;
   const unassigned = subjects.filter(s => !s.teacher_id).length;
-  const selClassName = classes.find(c => c.id === parseInt(selClass));
+  const selClassObj = classes.find(c => c.id === parseInt(selClass));
 
   return (
     <div>
@@ -191,27 +197,26 @@ export default function SubjectTeacherAssignment() {
         </div>
       )}
 
-      {/* Errors */}
+      {/* Unmatched warning */}
       {errors.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
           <p className="text-sm font-semibold text-amber-700 mb-2">
             ⚠️ {errors.length} subject{errors.length > 1 ? 's' : ''} could not be auto-assigned — assign manually below:
           </p>
-          <ul className="text-xs text-amber-600 space-y-0.5 max-h-32 overflow-y-auto">
+          <ul className="text-xs text-amber-600 space-y-0.5 max-h-40 overflow-y-auto">
             {errors.map((e, i) => <li key={i}>• {e}</li>)}
           </ul>
         </div>
       )}
 
-      {/* Info banner */}
       {!progress && errors.length === 0 && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 flex items-start gap-3">
-          <span className="text-lg">💡</span>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 flex gap-3 items-start">
+          <span className="text-lg mt-0.5">💡</span>
           <div>
-            <p className="text-sm font-medium text-blue-700 mb-0.5">How bulk assign works</p>
+            <p className="text-sm font-medium text-blue-700 mb-0.5">How it works</p>
             <p className="text-xs text-blue-500">
-              Matches each subject to a teacher whose specialization matches the subject name.
-              Only fills subjects with no teacher yet. Review per class below to fix any gaps.
+              Matches each subject to a teacher by specialization. Only fills subjects with no teacher.
+              Select a class below to manually review or fix any gaps.
             </p>
           </div>
         </div>
@@ -230,20 +235,20 @@ export default function SubjectTeacherAssignment() {
             <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1.5 rounded-full">
               ✓ {assigned} assigned
             </span>
-            <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
-              unassigned > 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-              {unassigned > 0 ? `⚠ ${unassigned} missing` : '✓ All assigned'}
+            <span className={`text-xs font-medium px-3 py-1.5 rounded-full
+              ${unassigned > 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
+              {unassigned > 0 ? `⚠ ${unassigned} missing` : '✓ All done'}
             </span>
           </>
         )}
       </div>
 
-      {/* Subject table */}
+      {/* Table */}
       {!selClass ? (
         <div className="bg-white border border-gray-100 rounded-2xl p-16 text-center">
           <p className="text-4xl mb-3">📚</p>
-          <p className="text-gray-600 text-sm font-medium mb-1">Select a class to review assignments</p>
-          <p className="text-gray-400 text-xs">Or click ⚡ Bulk auto-assign to process all classes at once</p>
+          <p className="text-gray-600 text-sm font-medium mb-1">Select a class to review</p>
+          <p className="text-gray-400 text-xs">Or click ⚡ Bulk auto-assign to process all at once</p>
         </div>
       ) : loading ? (
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
@@ -256,7 +261,7 @@ export default function SubjectTeacherAssignment() {
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">
-              {selClassName?.name} {selClassName?.section} — {subjects.length} subjects
+              {selClassObj?.name} {selClassObj?.section} — {subjects.length} subjects
             </h3>
             {unassigned > 0 && (
               <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
@@ -269,7 +274,7 @@ export default function SubjectTeacherAssignment() {
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-400">Subject</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 w-20">Code</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 w-16">Periods</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 w-16 text-center">Periods</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-400">Assigned teacher</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 w-24">Status</th>
               </tr>
@@ -277,11 +282,12 @@ export default function SubjectTeacherAssignment() {
             <tbody>
               {subjects.map(s => (
                 <tr key={s.id} className={`border-b border-gray-50 last:border-0 transition-colors
-                  ${!s.teacher_id ? 'bg-red-50/30 hover:bg-red-50/50' : 'hover:bg-gray-50'}`}>
+                  ${!s.teacher_id ? 'bg-red-50/40' : 'hover:bg-gray-50'}`}>
                   <td className="px-4 py-3 font-medium text-gray-700">{s.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">{s.code || '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-center">{s.periods_per_week}×</td>
                   <td className="px-4 py-3">
+                    {/* value uses user_id because subjects.teacher_id = users.id */}
                     <Select
                       value={s.teacher_id || ''}
                       onChange={e => assignTeacher(s.id, e.target.value)}
@@ -289,7 +295,7 @@ export default function SubjectTeacherAssignment() {
                       className="w-full text-sm">
                       <option value="">— No teacher assigned —</option>
                       {teachers.map(t => (
-                        <option key={t.id} value={t.id}>
+                        <option key={t.id} value={t.user_id}>
                           {t.name}{t.specialization ? ` (${t.specialization})` : ''}
                         </option>
                       ))}
