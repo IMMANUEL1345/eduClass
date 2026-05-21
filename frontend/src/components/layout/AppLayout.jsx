@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, selectUser } from '../../store/slices/authSlice';
 import toast from 'react-hot-toast';
 
+const API = process.env.REACT_APP_API_URL || 'https://educlass-api.onrender.com';
+
 const NAV = {
   admin: [
-    { to: '/dashboard',        label: 'Dashboard'        },
-    { to: '/users',            label: 'User management'  },
-    { to: '/admissions/list',  label: 'Admissions'       },
-    { to: '/students',         label: 'Students'         },
-    { to: '/teachers',         label: 'Teachers'         },
-    { to: '/classes',          label: 'Classes'          },
+    { to: '/dashboard',           label: 'Dashboard'        },
+    { to: '/users',               label: 'User management'  },
+    { to: '/admissions/list',     label: 'Admissions'       },
+    { to: '/students',            label: 'Students'         },
+    { to: '/teachers',            label: 'Teachers'         },
+    { to: '/classes',             label: 'Classes'          },
     { to: '/timetable',           label: 'Timetable'        },
     { to: '/subject-assignments', label: 'Assign teachers'  },
     { to: '/attendance',          label: 'Attendance'       },
@@ -20,67 +22,67 @@ const NAV = {
     { to: '/reports',             label: 'Reports'          },
     { to: '/analytics',           label: 'Analytics'        },
     { to: '/fees',                label: 'Fees'             },
-    { to: '/expenses',         label: 'Expenses'         },
-    { to: '/inventory',        label: 'Inventory'        },
-    { to: '/staff-attendance', label: 'Staff attendance' },
-    { to: '/virtual-classroom', label: '🎓 Virtual class'  },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/expenses',            label: 'Expenses'         },
+    { to: '/inventory',           label: 'Inventory'        },
+    { to: '/staff-attendance',    label: 'Staff attendance' },
+    { to: '/virtual-classroom',   label: '🎓 Virtual class'  },
+    { to: '/messages',            label: 'Messages'         },
+    { to: '/announcements',       label: 'Announcements'    },
+    { to: '/settings',            label: 'Settings'         },
   ],
   teacher: [
-    { to: '/dashboard',        label: 'Dashboard'        },
-    { to: '/timetable',        label: 'Timetable'        },
-    { to: '/check-in',         label: 'Check in/out'     },
-    { to: '/attendance',       label: 'Attendance'       },
-    { to: '/grades',           label: 'Grades'           },
-    { to: '/assignments',      label: 'Assignments'      },
-    { to: '/reports',          label: 'Reports'          },
-    { to: '/virtual-classroom', label: '🎓 Virtual class'  },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/dashboard',          label: 'Dashboard'        },
+    { to: '/timetable',          label: 'Timetable'        },
+    { to: '/check-in',           label: 'Check in/out'     },
+    { to: '/attendance',         label: 'Attendance'       },
+    { to: '/grades',             label: 'Grades'           },
+    { to: '/assignments',        label: 'Assignments'      },
+    { to: '/reports',            label: 'Reports'          },
+    { to: '/virtual-classroom',  label: '🎓 Virtual class'  },
+    { to: '/messages',           label: 'Messages'         },
+    { to: '/announcements',      label: 'Announcements'    },
+    { to: '/settings',           label: 'Settings'         },
   ],
   accountant: [
-    { to: '/fees',                label: 'Fee dashboard'   },
-    { to: '/fees/payments/new',   label: 'Record payment'  },
-    { to: '/fees/payments',       label: 'Payment history' },
-    { to: '/fees/defaulters',     label: 'Defaulters'      },
-    { to: '/fees/cleared',        label: 'Cleared'         },
-    { to: '/fees/structures',     label: 'Fee structures'  },
-    { to: '/expenses',            label: 'Expenses'        },
-    { to: '/inventory',           label: 'Inventory'       },
-    { to: '/inventory/pos',       label: 'POS Terminal'    },
-    { to: '/check-in',            label: 'Check in/out'    },
-    { to: '/virtual-classroom', label: '🎓 Virtual class'  },
-    { to: '/messages',            label: 'Messages'        },
-    { to: '/announcements',       label: 'Announcements'   },
-    { to: '/settings',            label: 'Settings'        },
+    { to: '/fees',               label: 'Fee dashboard'   },
+    { to: '/fees/payments/new',  label: 'Record payment'  },
+    { to: '/fees/payments',      label: 'Payment history' },
+    { to: '/fees/defaulters',    label: 'Defaulters'      },
+    { to: '/fees/cleared',       label: 'Cleared'         },
+    { to: '/fees/structures',    label: 'Fee structures'  },
+    { to: '/expenses',           label: 'Expenses'        },
+    { to: '/inventory',          label: 'Inventory'       },
+    { to: '/inventory/pos',      label: 'POS Terminal'    },
+    { to: '/check-in',           label: 'Check in/out'    },
+    { to: '/virtual-classroom',  label: '🎓 Virtual class'  },
+    { to: '/messages',           label: 'Messages'        },
+    { to: '/announcements',      label: 'Announcements'   },
+    { to: '/settings',           label: 'Settings'        },
   ],
   cashier: [
-    { to: '/inventory/pos',    label: 'POS Terminal'     },
-    { to: '/inventory/sales',  label: 'Sales history'    },
-    { to: '/check-in',         label: 'Check in/out'     },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/inventory/pos',      label: 'POS Terminal'    },
+    { to: '/inventory/sales',    label: 'Sales history'   },
+    { to: '/check-in',           label: 'Check in/out'    },
+    { to: '/messages',           label: 'Messages'        },
+    { to: '/announcements',      label: 'Announcements'   },
+    { to: '/settings',           label: 'Settings'        },
   ],
   admissions_officer: [
-    { to: '/admissions',       label: 'Dashboard'        },
-    { to: '/admissions/new',   label: 'New application'  },
-    { to: '/admissions/list',  label: 'All applications' },
-    { to: '/check-in',         label: 'Check in/out'     },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/admissions',         label: 'Dashboard'        },
+    { to: '/admissions/new',     label: 'New application'  },
+    { to: '/admissions/list',    label: 'All applications' },
+    { to: '/check-in',           label: 'Check in/out'     },
+    { to: '/messages',           label: 'Messages'         },
+    { to: '/announcements',      label: 'Announcements'    },
+    { to: '/settings',           label: 'Settings'         },
   ],
   headmaster: [
-    { to: '/dashboard',        label: 'Dashboard'        },
-    { to: '/users',            label: 'Staff management' },
-    { to: '/admissions/list',  label: 'Admissions'       },
-    { to: '/students',         label: 'Students'         },
-    { to: '/teachers',         label: 'Teachers'         },
-    { to: '/classes',          label: 'Classes'          },
+    { to: '/dashboard',           label: 'Dashboard'        },
+    { to: '/users',               label: 'Staff management' },
+    { to: '/admissions/list',     label: 'Admissions'       },
+    { to: '/students',            label: 'Students'         },
+    { to: '/teachers',            label: 'Teachers'         },
+    { to: '/classes',             label: 'Classes'          },
     { to: '/timetable',           label: 'Timetable'        },
     { to: '/subject-assignments', label: 'Assign teachers'  },
     { to: '/attendance',          label: 'Attendance'       },
@@ -89,32 +91,33 @@ const NAV = {
     { to: '/reports',             label: 'Reports'          },
     { to: '/analytics',           label: 'Analytics'        },
     { to: '/fees',                label: 'Fees (view)'      },
-    { to: '/expenses',         label: 'Expenses'         },
-    { to: '/staff-attendance', label: 'Staff attendance' },
-    { to: '/check-in',         label: 'Check in/out'     },
-    { to: '/virtual-classroom', label: '🎓 Virtual class'  },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/expenses',            label: 'Expenses'         },
+    { to: '/staff-attendance',    label: 'Staff attendance' },
+    { to: '/check-in',            label: 'Check in/out'     },
+    { to: '/virtual-classroom',   label: '🎓 Virtual class'  },
+    { to: '/messages',            label: 'Messages'         },
+    { to: '/announcements',       label: 'Announcements'    },
+    { to: '/settings',            label: 'Settings'         },
   ],
   parent: [
-    { to: '/dashboard',        label: 'Dashboard'        },
-    { to: '/my-child',         label: 'My child'         },
-    { to: '/assignments',      label: 'Assignments'      },
-    { to: '/reports',          label: 'Reports'          },
-    { to: '/virtual-classroom', label: '🎓 Virtual class'  },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/dashboard',          label: 'Dashboard'        },
+    { to: '/my-child',           label: 'My child'         },
+    { to: '/assignments',        label: 'Assignments'      },
+    { to: '/reports',            label: 'Reports'          },
+    { to: '/virtual-classroom',  label: '🎓 Virtual class'  },
+    { to: '/messages',           label: 'Messages'         },
+    { to: '/announcements',      label: 'Announcements'    },
+    { to: '/settings',           label: 'Settings'         },
   ],
   student: [
-    { to: '/dashboard',        label: 'Home'             },
-    { to: '/grades',           label: 'My grades'        },
-    { to: '/assignments',      label: 'Assignments'      },
-    { to: '/reports',          label: 'Reports'          },
-    { to: '/messages',         label: 'Messages'         },
-    { to: '/announcements',    label: 'Announcements'    },
-    { to: '/settings',         label: 'Settings'         },
+    { to: '/dashboard',          label: 'Home'             },
+    { to: '/grades',             label: 'My grades'        },
+    { to: '/assignments',        label: 'Assignments'      },
+    { to: '/virtual-classroom',  label: '🎓 Virtual class'  },
+    { to: '/reports',            label: 'Reports'          },
+    { to: '/messages',           label: 'Messages'         },
+    { to: '/announcements',      label: 'Announcements'    },
+    { to: '/settings',           label: 'Settings'         },
   ],
 };
 
@@ -129,6 +132,167 @@ const ROLE_COLOR = {
   headmaster:          'bg-emerald-100 text-emerald-700',
 };
 
+// ── Notification Bell ─────────────────────────────────────
+function NotificationBell() {
+  const [notifications, setNotifications] = useState([]);
+  const [unread, setUnread]               = useState(0);
+  const [open, setOpen]                   = useState(false);
+  const panelRef                          = useRef(null);
+  const navigate                          = useNavigate();
+
+  const token = sessionStorage.getItem('token');
+
+  const fetchNotifs = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/api/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = data.data?.notifications || data.data || [];
+      setNotifications(list.slice(0, 20));
+      setUnread(list.filter(n => !n.is_read).length);
+    } catch { /* silent fail */ }
+  }, [token]);
+
+  // Poll every 30 seconds
+  useEffect(() => {
+    fetchNotifs();
+    const id = setInterval(fetchNotifs, 30_000);
+    return () => clearInterval(id);
+  }, [fetchNotifs]);
+
+  // Close panel on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  async function markAllRead() {
+    if (!token) return;
+    await fetch(`${API}/api/notifications/read-all`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnread(0);
+  }
+
+  async function handleClick(notif) {
+    if (!notif.is_read && token) {
+      await fetch(`${API}/api/notifications/${notif.id}/read`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+      setNotifications(prev =>
+        prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
+      );
+      setUnread(prev => Math.max(0, prev - 1));
+    }
+    // Navigate to virtual class if it's that type
+    if (notif.type === 'virtual_class') {
+      navigate('/virtual-classroom');
+      setOpen(false);
+    }
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  }
+
+  const typeIcon = (type) => {
+    if (type === 'virtual_class') return '🎓';
+    if (type === 'announcement')  return '📢';
+    if (type === 'message')       return '✉️';
+    return '🔔';
+  };
+
+  return (
+    <div className="relative" ref={panelRef}>
+      {/* Bell button */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="relative p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        title="Notifications"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002
+               6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6
+               8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4
+               17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5
+                           bg-red-500 text-white text-[10px] font-bold rounded-full
+                           flex items-center justify-center leading-none">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className="absolute right-0 top-9 w-80 bg-white rounded-xl shadow-xl
+                        border border-gray-100 z-50 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-800">
+              Notifications {unread > 0 && <span className="text-red-500">({unread})</span>}
+            </span>
+            {unread > 0 && (
+              <button onClick={markAllRead}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* List */}
+          <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                No notifications yet
+              </div>
+            ) : (
+              notifications.map(n => (
+                <button key={n.id} onClick={() => handleClick(n)}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50
+                              transition-colors flex gap-3 items-start
+                              ${!n.is_read ? 'bg-blue-50/40' : ''}`}>
+                  <span className="text-lg mt-0.5 flex-shrink-0">{typeIcon(n.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs leading-snug truncate
+                                   ${!n.is_read ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>
+                      {n.title}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-snug">
+                      {n.body}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
+                  </div>
+                  {!n.is_read && (
+                    <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5"/>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Layout ───────────────────────────────────────────
 export default function AppLayout() {
   const user     = useSelector(selectUser);
   const dispatch = useDispatch();
@@ -147,7 +311,7 @@ export default function AppLayout() {
     navigate('/login');
   }
 
-  const initials = user?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
+  const initials  = user?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
   const roleColor = ROLE_COLOR[user?.role] || 'bg-gray-100 text-gray-600';
 
   return (
@@ -198,7 +362,8 @@ export default function AppLayout() {
         {/* User info */}
         <div className="p-3 border-t border-gray-100">
           <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${roleColor}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center
+                             text-xs font-medium flex-shrink-0 ${roleColor}`}>
               {initials}
             </div>
             <div className="flex-1 min-w-0">
@@ -219,20 +384,31 @@ export default function AppLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Mobile top bar */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+        {/* Top bar — desktop + mobile */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-white
+                        border-b border-gray-100 flex-shrink-0">
+          {/* Left: hamburger (mobile) + logo (mobile) */}
           <div className="flex items-center gap-2">
             <button onClick={() => setSidebarOpen(true)}
-              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
+              className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
-            <img src="/logo.png" alt="EduClass" className="w-7 h-7 object-contain" />
-            <span className="text-sm font-semibold text-gray-800">EduClass</span>
+            <div className="lg:hidden flex items-center gap-1.5">
+              <img src="/logo.png" alt="EduClass" className="w-6 h-6 object-contain" />
+              <span className="text-sm font-semibold text-gray-800">EduClass</span>
+            </div>
           </div>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${roleColor}`}>
-            {initials}
+
+          {/* Right: bell + avatar */}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center
+                             text-xs font-medium ${roleColor}`}>
+              {initials}
+            </div>
           </div>
         </div>
 
