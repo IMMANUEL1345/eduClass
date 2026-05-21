@@ -227,3 +227,19 @@ export const assignmentAPI = {
   submit:         (id, body)     => api.post(`/assignments/${id}/submit`, body),
   grade:          (id, subId, b) => api.put(`/assignments/${id}/submissions/${subId}/grade`, b),
 };
+export const virtualClassroomAPI = {
+  list:            (params)          => api.get('/virtual-classroom', { params }),
+  create:          (body)            => api.post('/virtual-classroom', body),
+  getOne:          (id)              => api.get(`/virtual-classroom/${id}`),
+  remove:          (id)              => api.delete(`/virtual-classroom/${id}`),
+  startSession:    (id)              => api.post(`/virtual-classroom/${id}/start`),
+  endSession:      (id)              => api.post(`/virtual-classroom/${id}/end`),
+  addMaterial:     (id, body)        => api.post(`/virtual-classroom/${id}/materials`, body),
+  removeMaterial:  (id, matId)       => api.delete(`/virtual-classroom/${id}/materials/${matId}`),
+  sendMessage:     (id, message)     => api.post(`/virtual-classroom/${id}/messages`, { message }),
+  getMessages:     (id, since)       => api.get(`/virtual-classroom/${id}/messages`, { params: { since } }),
+  askQuestion:     (id, question)    => api.post(`/virtual-classroom/${id}/qa`, { question }),
+  answerQuestion:  (id, qaId, body)  => api.put(`/virtual-classroom/${id}/qa/${qaId}/answer`, body),
+  upvoteQuestion:  (id, qaId)        => api.put(`/virtual-classroom/${id}/qa/${qaId}/upvote`),
+  joinByCode:      (roomCode)        => api.get(`/virtual-classroom/join/${roomCode}`),
+};

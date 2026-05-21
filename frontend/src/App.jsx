@@ -58,7 +58,8 @@ import StudentAssignments  from './pages/student/Assignments';
 import ParentAssignments   from './pages/parent/Assignments';
 
 // Admissions
-import AdmissionsDashboard from './pages/admissions/Dashboard';
+import VirtualClassroom        from './pages/shared/VirtualClassroom';
+import AdmissionsDashboard     from './pages/admissions/Dashboard';
 import AdmissionsList      from './pages/admissions/AdmissionsList';
 import NewAdmission        from './pages/admissions/NewAdmission';
 import AdmissionDetail     from './pages/admissions/AdmissionDetail';
@@ -144,6 +145,8 @@ function AppRoutes() {
           <Route path="/expenses"            element={<Expenses />} />
           <Route path="/inventory"           element={<Inventory />} />
           <Route path="/inventory/pos"       element={<POS />} />
+
+          <Route path="/virtual-classroom" element={<VirtualClassroom />} />
 
           {/* Admissions */}
           <Route path="/admissions"          element={<AdmissionsDashboard />} />
