@@ -60,7 +60,7 @@ export default function IncidentReportDetail() {
   async function fetchReport() {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/api/incidents/${id}`, {
+      const res  = await fetch(`${API}/incidents/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -73,7 +73,7 @@ export default function IncidentReportDetail() {
   async function handleStatusUpdate() {
     setUpdating(true);
     try {
-      const res  = await fetch(`${API}/api/incidents/${id}/status`, {
+      const res  = await fetch(`${API}/incidents/${id}/status`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(statusForm),
@@ -88,7 +88,7 @@ export default function IncidentReportDetail() {
 
   async function handleDelete() {
     if (!window.confirm('Delete this report permanently?')) return;
-    const res = await fetch(`${API}/api/incidents/${id}`, {
+    const res = await fetch(`${API}/incidents/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) { toast.success('Report deleted'); navigate('/incidents'); }

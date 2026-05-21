@@ -39,7 +39,7 @@ export default function IncidentReports() {
     setLoading(true);
     try {
       const q   = new URLSearchParams(Object.fromEntries(Object.entries(filters).filter(([,v]) => v)));
-      const res = await fetch(`${API}/api/incidents?${q}`, {
+      const res = await fetch(`${API}/incidents?${q}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

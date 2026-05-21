@@ -153,7 +153,7 @@ function NotificationBell() {
   const fetchNotifs = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/api/notifications`, {
+      const res = await fetch(`${API}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
@@ -182,7 +182,7 @@ function NotificationBell() {
 
   async function markAllRead() {
     if (!token) return;
-    await fetch(`${API}/api/notifications/read-all`, {
+    await fetch(`${API}/notifications/read-all`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});
@@ -192,7 +192,7 @@ function NotificationBell() {
 
   async function handleClick(notif) {
     if (!notif.is_read && token) {
-      await fetch(`${API}/api/notifications/${notif.id}/read`, {
+      await fetch(`${API}/notifications/${notif.id}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});

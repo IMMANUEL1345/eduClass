@@ -52,7 +52,7 @@ export default function NewIncidentReport() {
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res  = await fetch(`${API}/api/incidents/search-subjects?q=${encodeURIComponent(val)}`, {
+        const res  = await fetch(`${API}/incidents/search-subjects?q=${encodeURIComponent(val)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -95,7 +95,7 @@ export default function NewIncidentReport() {
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       files.forEach(f => fd.append('files', f));
 
-      const res  = await fetch(`${API}/api/incidents`, {
+      const res  = await fetch(`${API}/incidents`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
