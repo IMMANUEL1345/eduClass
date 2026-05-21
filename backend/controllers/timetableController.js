@@ -117,10 +117,13 @@ async function generateTimetable(req, res) {
 
   try {
     // 1. Get all subjects for this class WITH their assigned teachers
+    // subjects.teacher_id = users.id, but timetable.teacher_id = teachers.id
+    // So we must join to get the teacher RECORD id
     const { rows: subjects } = await pool.query(
       `SELECT s.id AS subject_id, s.name AS subject_name,
-              s.periods_per_week, s.teacher_id AS teacher_id
+              s.periods_per_week, t.id AS teacher_id
        FROM subjects s
+       JOIN teachers t ON t.user_id = s.teacher_id
        WHERE s.class_id = $1 AND s.teacher_id IS NOT NULL`,
       [class_id]
     );
