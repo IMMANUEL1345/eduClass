@@ -36,9 +36,13 @@ import StudentDashboard from './pages/student/Dashboard';
 import Reports       from './pages/shared/Reports';
 import Messages      from './pages/shared/Messages';
 import Announcements from './pages/shared/Announcements';
-import Settings        from './pages/shared/Settings';
-import StaffCheckIn    from './pages/shared/StaffCheckIn';
+import Settings      from './pages/shared/Settings';
+import StaffCheckIn  from './pages/shared/StaffCheckIn';
 import StaffAttendance from './pages/admin/StaffAttendance';
+import VirtualClassroom   from './pages/shared/VirtualClassroom';
+import IncidentReports    from './pages/shared/IncidentReports';
+import NewIncidentReport  from './pages/shared/NewIncidentReport';
+import IncidentReportDetail from './pages/shared/IncidentReportDetail';
 
 // Accountant / fees
 import AccountantDashboard from './pages/accountant/Dashboard';
@@ -51,15 +55,14 @@ import Expenses            from './pages/accountant/Expenses';
 import Inventory           from './pages/accountant/Inventory';
 import POS                 from './pages/accountant/POS';
 
-import Timetable                  from './pages/admin/Timetable';
-import SubjectTeacherAssignment   from './pages/admin/SubjectTeacherAssignment';
+import Timetable                from './pages/admin/Timetable';
+import SubjectTeacherAssignment from './pages/admin/SubjectTeacherAssignment';
 import TeacherAssignments  from './pages/teacher/Assignments';
 import StudentAssignments  from './pages/student/Assignments';
 import ParentAssignments   from './pages/parent/Assignments';
 
 // Admissions
-import VirtualClassroom        from './pages/shared/VirtualClassroom';
-import AdmissionsDashboard     from './pages/admissions/Dashboard';
+import AdmissionsDashboard from './pages/admissions/Dashboard';
 import AdmissionsList      from './pages/admissions/AdmissionsList';
 import NewAdmission        from './pages/admissions/NewAdmission';
 import AdmissionDetail     from './pages/admissions/AdmissionDetail';
@@ -107,52 +110,58 @@ function AppRoutes() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
-          <Route path="/dashboard"           element={<DashboardRedirect />} />
-          <Route path="/settings"            element={<Settings />} />
-          <Route path="/check-in"            element={<StaffCheckIn />} />
-          <Route path="/staff-attendance"    element={<StaffAttendance />} />
+          <Route path="/dashboard"        element={<DashboardRedirect />} />
+          <Route path="/settings"         element={<Settings />} />
+          <Route path="/check-in"         element={<StaffCheckIn />} />
+          <Route path="/staff-attendance" element={<StaffAttendance />} />
 
           {/* Admin */}
-          <Route path="/users"               element={<UserManagement />} />
-          <Route path="/students"            element={<Students />} />
-          <Route path="/students/:id"        element={<StudentDetail />} />
-          <Route path="/teachers"            element={<Teachers />} />
-          <Route path="/classes"             element={<Classes />} />
-          <Route path="/analytics"           element={<Analytics />} />
-          <Route path="/timetable"                element={<Timetable />} />
-          <Route path="/subject-assignments"     element={<SubjectTeacherAssignment />} />
+          <Route path="/users"                element={<UserManagement />} />
+          <Route path="/students"             element={<Students />} />
+          <Route path="/students/:id"         element={<StudentDetail />} />
+          <Route path="/teachers"             element={<Teachers />} />
+          <Route path="/classes"              element={<Classes />} />
+          <Route path="/analytics"            element={<Analytics />} />
+          <Route path="/timetable"            element={<Timetable />} />
+          <Route path="/subject-assignments"  element={<SubjectTeacherAssignment />} />
 
-          {/* Assignments — role-aware */}
-          <Route path="/assignments"           element={<AssignmentsRoute />} />
+          {/* Assignments */}
+          <Route path="/assignments"          element={<AssignmentsRoute />} />
 
           {/* Academic */}
-          <Route path="/attendance"          element={<TeacherAttendance />} />
-          <Route path="/grades"              element={<TeacherGrades />} />
-          <Route path="/reports"             element={<Reports />} />
-          <Route path="/messages"            element={<Messages />} />
-          <Route path="/announcements"       element={<Announcements />} />
-          <Route path="/my-child"            element={<ParentDashboard />} />
+          <Route path="/attendance"           element={<TeacherAttendance />} />
+          <Route path="/grades"               element={<TeacherGrades />} />
+          <Route path="/reports"              element={<Reports />} />
+          <Route path="/messages"             element={<Messages />} />
+          <Route path="/announcements"        element={<Announcements />} />
+          <Route path="/my-child"             element={<ParentDashboard />} />
 
           {/* Fees */}
-          <Route path="/fees"                element={<AccountantDashboard />} />
-          <Route path="/fees/payments/new"   element={<RecordPayment />} />
-          <Route path="/fees/payments"       element={<PaymentHistory />} />
-          <Route path="/fees/defaulters"     element={<Defaulters />} />
-          <Route path="/fees/cleared"        element={<ClearedStudents />} />
-          <Route path="/fees/structures"     element={<FeeStructures />} />
+          <Route path="/fees"                 element={<AccountantDashboard />} />
+          <Route path="/fees/payments/new"    element={<RecordPayment />} />
+          <Route path="/fees/payments"        element={<PaymentHistory />} />
+          <Route path="/fees/defaulters"      element={<Defaulters />} />
+          <Route path="/fees/cleared"         element={<ClearedStudents />} />
+          <Route path="/fees/structures"      element={<FeeStructures />} />
 
           {/* Finance */}
-          <Route path="/expenses"            element={<Expenses />} />
-          <Route path="/inventory"           element={<Inventory />} />
-          <Route path="/inventory/pos"       element={<POS />} />
+          <Route path="/expenses"             element={<Expenses />} />
+          <Route path="/inventory"            element={<Inventory />} />
+          <Route path="/inventory/pos"        element={<POS />} />
 
-          <Route path="/virtual-classroom" element={<VirtualClassroom />} />
+          {/* Virtual Classroom */}
+          <Route path="/virtual-classroom"    element={<VirtualClassroom />} />
+
+          {/* Incident Reports */}
+          <Route path="/incidents"            element={<IncidentReports />} />
+          <Route path="/incidents/new"        element={<NewIncidentReport />} />
+          <Route path="/incidents/:id"        element={<IncidentReportDetail />} />
 
           {/* Admissions */}
-          <Route path="/admissions"          element={<AdmissionsDashboard />} />
-          <Route path="/admissions/list"     element={<AdmissionsList />} />
-          <Route path="/admissions/new"      element={<NewAdmission />} />
-          <Route path="/admissions/:id"      element={<AdmissionDetail />} />
+          <Route path="/admissions"           element={<AdmissionsDashboard />} />
+          <Route path="/admissions/list"      element={<AdmissionsList />} />
+          <Route path="/admissions/new"       element={<NewAdmission />} />
+          <Route path="/admissions/:id"       element={<AdmissionDetail />} />
         </Route>
       </Route>
 

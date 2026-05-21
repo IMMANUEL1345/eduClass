@@ -12,13 +12,27 @@ async function list(req, res) {
   const conditions = ['TRUE']; const params = [];
   if (class_id) conditions.push(`vs.class_id = $${params.push(class_id)}`);
   if (status)   conditions.push(`vs.status = $${params.push(status)}`);
-  // Students only see sessions for their class
+
+  // Students only see sessions for their own class
   if (req.user.role === 'student') {
     const { rows: [s] } = await pool.query(
       'SELECT class_id FROM students WHERE user_id=$1', [req.user.id]
     );
     if (s) conditions.push(`vs.class_id = $${params.push(s.class_id)}`);
   }
+
+  // Parents only see sessions for their children's classes
+  if (req.user.role === 'parent') {
+    const { rows: children } = await pool.query(
+      'SELECT class_id FROM students WHERE parent_id=$1 OR user_id IN (SELECT child_id FROM parent_links WHERE parent_id=$1)',
+      [req.user.id]
+    );
+    const classIds = children.map(c => c.class_id).filter(Boolean);
+    if (classIds.length > 0) {
+      conditions.push(`vs.class_id = ANY($${params.push(classIds)})`);
+    }
+  }
+
   try {
     const { rows } = await pool.query(
       `SELECT vs.id, vs.title, vs.description, vs.room_code, vs.status,
@@ -41,31 +55,82 @@ async function list(req, res) {
 
 // POST /api/virtual-classroom
 async function create(req, res) {
-  const { title, description, class_id, subject, scheduled_at } = req.body;
+  let { title, description, class_id, subject, scheduled_at } = req.body;
   if (!title) return error(res, 'Title is required');
-  const roomCode = genRoomCode();
+
   try {
+    // STUDENTS: force class_id to their own class — cannot schedule for other classes
+    if (req.user.role === 'student') {
+      const { rows: [s] } = await pool.query(
+        'SELECT class_id FROM students WHERE user_id=$1', [req.user.id]
+      );
+      if (!s) return error(res, 'Student record not found');
+      class_id = s.class_id; // Override whatever was sent — always their own class
+    }
+
+    const roomCode = genRoomCode();
     const { rows: [r] } = await pool.query(
       `INSERT INTO virtual_sessions
         (title, description, class_id, host_id, room_code, subject, scheduled_at, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'scheduled') RETURNING id, room_code`,
-      [title, description||null, class_id||null, req.user.id,
-       roomCode, subject||null, scheduled_at||null]
+      [title, description || null, class_id || null, req.user.id,
+       roomCode, subject || null, scheduled_at || null]
     );
-    // Notify class students if class_id given
+
+    // Notify everyone in the target class (students + parents) if class_id given
     if (class_id) {
+      // Get all students in the class
       const { rows: students } = await pool.query(
         'SELECT user_id FROM students WHERE class_id=$1', [class_id]
       );
+
+      // Get class name for the notification message
+      const { rows: [cls] } = await pool.query(
+        'SELECT name, section FROM classes WHERE id=$1', [class_id]
+      );
+      const className = cls ? `${cls.name}${cls.section ? ' ' + cls.section : ''}` : 'your class';
+
+      const notifBody = `${req.user.name} has scheduled a virtual class "${title}" for ${className}. Room code: ${roomCode}`;
+
+      // Notify each student
       for (const s of students) {
+        // Don't notify the student who created it
+        if (s.user_id === req.user.id) continue;
         await pool.query(
           `INSERT INTO notifications (user_id, type, title, body)
            VALUES ($1,'virtual_class',$2,$3)`,
-          [s.user_id, `Virtual class: ${title}`,
-           `${req.user.name} has scheduled a virtual class. Join with code: ${roomCode}`]
+          [s.user_id, `🎓 Virtual class scheduled: ${title}`, notifBody]
+        ).catch(() => {});
+      }
+
+      // Also notify parents linked to students in this class
+      const { rows: parents } = await pool.query(
+        `SELECT DISTINCT p.user_id
+         FROM students s
+         JOIN students p_link ON p_link.class_id = s.class_id
+         WHERE s.class_id = $1
+           AND EXISTS (
+             SELECT 1 FROM users pu WHERE pu.id = s.user_id
+           )`, [class_id]
+      );
+
+      // Simpler parent query — get parents via parent_links table if it exists
+      const { rows: parentUsers } = await pool.query(
+        `SELECT DISTINCT pl.parent_id AS user_id
+         FROM parent_links pl
+         JOIN students st ON st.user_id = pl.child_id
+         WHERE st.class_id = $1`, [class_id]
+      ).catch(() => ({ rows: [] }));
+
+      for (const p of parentUsers) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, body)
+           VALUES ($1,'virtual_class',$2,$3)`,
+          [p.user_id, `🎓 Virtual class scheduled: ${title}`, notifBody]
         ).catch(() => {});
       }
     }
+
     return created(res, { id: r.id, room_code: r.room_code }, 'Session created');
   } catch (err) { return serverError(res, err); }
 }
@@ -115,10 +180,16 @@ async function getOne(req, res) {
 // POST /api/virtual-classroom/:id/start
 async function startSession(req, res) {
   try {
+    const { rows: [session] } = await pool.query(
+      'SELECT host_id FROM virtual_sessions WHERE id=$1', [req.params.id]
+    );
+    if (!session) return notFound(res, 'Session not found');
+    // Only the host can start
+    if (session.host_id !== req.user.id) return error(res, 'Only the host can start this session', 403);
+
     await pool.query(
-      `UPDATE virtual_sessions SET status='live', started_at=NOW()
-       WHERE id=$1 AND host_id=$2`,
-      [req.params.id, req.user.id]
+      `UPDATE virtual_sessions SET status='live', started_at=NOW() WHERE id=$1`,
+      [req.params.id]
     );
     return success(res, {}, 'Session started');
   } catch (err) { return serverError(res, err); }
@@ -127,10 +198,15 @@ async function startSession(req, res) {
 // POST /api/virtual-classroom/:id/end
 async function endSession(req, res) {
   try {
+    const { rows: [session] } = await pool.query(
+      'SELECT host_id FROM virtual_sessions WHERE id=$1', [req.params.id]
+    );
+    if (!session) return notFound(res, 'Session not found');
+    if (session.host_id !== req.user.id) return error(res, 'Only the host can end this session', 403);
+
     await pool.query(
-      `UPDATE virtual_sessions SET status='ended', ended_at=NOW()
-       WHERE id=$1 AND host_id=$2`,
-      [req.params.id, req.user.id]
+      `UPDATE virtual_sessions SET status='ended', ended_at=NOW() WHERE id=$1`,
+      [req.params.id]
     );
     return success(res, {}, 'Session ended');
   } catch (err) { return serverError(res, err); }
@@ -153,7 +229,7 @@ async function addMaterial(req, res) {
     const { rows: [r] } = await pool.query(
       `INSERT INTO session_materials (session_id,title,type,content,added_by)
        VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-      [req.params.id, title, type||'link', content, req.user.id]
+      [req.params.id, title, type || 'link', content, req.user.id]
     );
     return created(res, { id: r.id }, 'Material added');
   } catch (err) { return serverError(res, err); }
