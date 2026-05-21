@@ -29,6 +29,8 @@ const timetableRoutes       = require('./routes/timetable');
 const staffAttendanceRoutes  = require('./routes/staffAttendance');
 const assignmentRoutes          = require('./routes/assignments');
 const virtualClassroomRoutes    = require('./routes/virtualClassroom');
+const incidentsRouter = require('./routes/incidents');
+
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -96,6 +98,7 @@ app.use('/api/expenses',    expenseRoutes);
 app.use('/api/timetable',        timetableRoutes);
 app.use('/api/staff-attendance', staffAttendanceRoutes);
 app.use('/api/assignments',        assignmentRoutes);
+app.use('/api/incidents', incidentsRouter);
 app.use('/api/virtual-classroom',  virtualClassroomRoutes);
 app.use('/api',             commsRoutes);
 
