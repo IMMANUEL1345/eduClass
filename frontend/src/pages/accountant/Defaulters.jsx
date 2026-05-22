@@ -14,12 +14,27 @@ const METHODS = ['cash','mobile_money','bank_transfer','cheque'];
 // ── Quick Pay Modal ───────────────────────────────────────
 function QuickPayModal({ student, filters, onClose, onSuccess }) {
   const user = useSelector(selectUser);
-  const [amount,  setAmount]  = useState(parseFloat(student.balance).toFixed(2));
-  const [method,  setMethod]  = useState('cash');
-  const [date,    setDate]    = useState(new Date().toISOString().split('T')[0]);
-  const [ref,     setRef]     = useState('');
-  const [saving,  setSaving]  = useState(false);
-  const [receipt, setReceipt] = useState(null);
+  const [amount,       setAmount]       = useState(parseFloat(student.balance).toFixed(2));
+  const [method,       setMethod]       = useState('cash');
+  const [date,         setDate]         = useState(new Date().toISOString().split('T')[0]);
+  const [ref,          setRef]          = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [receipt,      setReceipt]      = useState(null);
+  const [feeStructureId, setFeeStructureId] = useState(student.fee_structure_id || null);
+  const [loadingFee,   setLoadingFee]   = useState(false);
+
+  // Fetch fee_structure_id if not already on the student object
+  React.useEffect(() => {
+    if (feeStructureId) return;
+    setLoadingFee(true);
+    feeAPI.studentBalance(student.student_id, {
+      term: filters.term,
+      academic_year: filters.academic_year,
+    }).then(({ data }) => {
+      const b = data.data?.[0];
+      if (b?.fee_structure_id) setFeeStructureId(b.fee_structure_id);
+    }).catch(() => {}).finally(() => setLoadingFee(false));
+  }, []);
 
   const outstanding   = parseFloat(student.balance);
   const amountNum     = parseFloat(amount) || 0;
@@ -33,7 +48,7 @@ function QuickPayModal({ student, filters, onClose, onSuccess }) {
     try {
       const { data } = await feeAPI.recordPayment({
         student_id:       parseInt(student.student_id),
-        fee_structure_id: parseInt(student.fee_structure_id),
+        fee_structure_id: parseInt(feeStructureId),
         amount_paid:      amountNum,
         payment_method:   method,
         reference:        ref,
@@ -188,7 +203,7 @@ function QuickPayModal({ student, filters, onClose, onSuccess }) {
                        rounded-lg hover:bg-gray-50">
             Cancel
           </button>
-          <button onClick={handlePay} disabled={saving}
+          <button onClick={handlePay} disabled={saving || loadingFee || !feeStructureId}
             className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-semibold
                        rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {saving ? 'Recording…' : '💳 Record Payment'}
