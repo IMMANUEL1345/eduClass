@@ -218,37 +218,61 @@ async function summary(req, res) {
   const { term, academic_year } = req.query;
   if (!term || !academic_year) return error(res, 'term and academic_year are required');
   try {
+    // ── CTE: aggregate payments per student first, THEN sum ──
+    // This prevents double-counting fs.amount when a student has
+    // multiple payment rows for the same fee structure.
     const { rows: [totals] } = await pool.query(
-      `SELECT
-         COUNT(DISTINCT s.id) AS total_students,
-         COALESCE(SUM(fs.amount), 0) AS total_expected,
-         COALESCE(SUM(fp.amount_paid), 0) AS total_collected,
-         COALESCE(SUM(fs.amount) - SUM(fp.amount_paid), 0) AS total_outstanding,
-         COUNT(DISTINCT CASE WHEN fs.amount <= COALESCE(sub.paid,0) THEN s.id END) AS cleared_count,
-         COUNT(DISTINCT CASE WHEN fs.amount > COALESCE(sub.paid,0) THEN s.id END) AS defaulters_count
-       FROM fee_structures fs
-       JOIN students s ON s.class_id = fs.class_id
-       LEFT JOIN fee_payments fp ON fp.fee_structure_id = fs.id AND fp.student_id = s.id
-       LEFT JOIN (
-         SELECT student_id, fee_structure_id, SUM(amount_paid) AS paid
-         FROM fee_payments GROUP BY student_id, fee_structure_id
-       ) sub ON sub.fee_structure_id = fs.id AND sub.student_id = s.id
-       WHERE fs.term = $1 AND fs.academic_year = $2`,
+      `WITH student_fees AS (
+         SELECT
+           s.id          AS student_id,
+           fs.id         AS fee_structure_id,
+           fs.amount     AS fee_amount,
+           COALESCE(SUM(fp.amount_paid), 0) AS paid
+         FROM fee_structures fs
+         JOIN students s ON s.class_id = fs.class_id
+         LEFT JOIN fee_payments fp
+           ON fp.fee_structure_id = fs.id AND fp.student_id = s.id
+         WHERE fs.term = $1 AND fs.academic_year = $2
+         GROUP BY s.id, fs.id, fs.amount
+       )
+       SELECT
+         COUNT(DISTINCT student_id)::int                          AS total_students,
+         COALESCE(SUM(fee_amount), 0)                            AS total_expected,
+         COALESCE(SUM(paid), 0)                                  AS total_collected,
+         COALESCE(SUM(fee_amount - paid), 0)                     AS total_outstanding,
+         COUNT(CASE WHEN paid >= fee_amount THEN 1 END)::int     AS cleared_count,
+         COUNT(CASE WHEN paid < fee_amount  THEN 1 END)::int     AS defaulters_count
+       FROM student_fees`,
       [term, academic_year]
     );
 
-    // Per class breakdown
+    // ── Per class breakdown (same CTE approach) ──────────────
     const { rows: byClass } = await pool.query(
-      `SELECT c.name AS class_name, c.section,
-              COUNT(DISTINCT s.id) AS students,
-              COALESCE(SUM(fs.amount),0) AS expected,
-              COALESCE(SUM(fp.amount_paid),0) AS collected
-       FROM fee_structures fs
-       JOIN students s ON s.class_id = fs.class_id
-       JOIN classes c  ON c.id = s.class_id
-       LEFT JOIN fee_payments fp ON fp.fee_structure_id = fs.id AND fp.student_id = s.id
-       WHERE fs.term = $1 AND fs.academic_year = $2
-       GROUP BY c.id, c.name, c.section ORDER BY c.name`,
+      `WITH student_fees AS (
+         SELECT
+           s.id          AS student_id,
+           c.id          AS class_id,
+           c.name        AS class_name,
+           c.section,
+           fs.amount     AS fee_amount,
+           COALESCE(SUM(fp.amount_paid), 0) AS paid
+         FROM fee_structures fs
+         JOIN students s ON s.class_id = fs.class_id
+         JOIN classes  c ON c.id = s.class_id
+         LEFT JOIN fee_payments fp
+           ON fp.fee_structure_id = fs.id AND fp.student_id = s.id
+         WHERE fs.term = $1 AND fs.academic_year = $2
+         GROUP BY s.id, c.id, c.name, c.section, fs.id, fs.amount
+       )
+       SELECT
+         class_name,
+         section,
+         COUNT(DISTINCT student_id)::int  AS students,
+         COALESCE(SUM(fee_amount), 0)     AS expected,
+         COALESCE(SUM(paid), 0)           AS collected
+       FROM student_fees
+       GROUP BY class_id, class_name, section
+       ORDER BY class_name`,
       [term, academic_year]
     );
 
