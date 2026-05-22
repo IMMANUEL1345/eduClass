@@ -40,6 +40,8 @@ import Settings      from './pages/shared/Settings';
 import StaffCheckIn  from './pages/shared/StaffCheckIn';
 import StaffAttendance from './pages/admin/StaffAttendance';
 import VirtualClassroom   from './pages/shared/VirtualClassroom';
+import FeedingTransport   from './pages/shared/FeedingTransport';
+import VerifyReceipt      from './pages/VerifyReceipt';
 import IncidentReports    from './pages/shared/IncidentReports';
 import NewIncidentReport  from './pages/shared/NewIncidentReport';
 import IncidentReportDetail from './pages/shared/IncidentReportDetail';
@@ -152,6 +154,9 @@ function AppRoutes() {
           {/* Virtual Classroom */}
           <Route path="/virtual-classroom"    element={<VirtualClassroom />} />
 
+          {/* Feeding & Transport */}
+          <Route path="/daily-fees"           element={<FeedingTransport />} />
+
           {/* Incident Reports */}
           <Route path="/incidents"            element={<IncidentReports />} />
           <Route path="/incidents/new"        element={<NewIncidentReport />} />
@@ -165,6 +170,7 @@ function AppRoutes() {
         </Route>
       </Route>
 
+      <Route path="/verify/:receiptNumber" element={<VerifyReceipt />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

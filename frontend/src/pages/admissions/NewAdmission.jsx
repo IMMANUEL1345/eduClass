@@ -17,7 +17,7 @@ export default function NewAdmission() {
   }, []);
   const [form, setForm] = useState({
     applicant_name:'', email:'', phone:'', dob:'', gender:'',
-    previous_school:'', class_applied:'', academic_year: CURRENT_YEAR,
+    previous_school:'', class_applied:'', class_id:'', academic_year: CURRENT_YEAR,
     parent_name:'', parent_phone:'', parent_email:'', notes:'',
   });
 
@@ -25,7 +25,7 @@ export default function NewAdmission() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.applicant_name || !form.class_applied) return toast.error('Name and class are required');
+    if (!form.applicant_name || !form.class_id) return toast.error('Name and class are required');
     setSaving(true);
     try {
       const { data } = await api.post('/admissions', form);
@@ -61,11 +61,19 @@ export default function NewAdmission() {
         <Card>
           <h3 className="text-sm font-medium text-gray-700 mb-4">Enrollment details</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Class applying for *" value={form.class_applied} onChange={set('class_applied')}>
+            <Select label="Class applying for *" value={form.class_id}
+              onChange={e => {
+                const cls = classes.find(c => String(c.id) === e.target.value);
+                setForm(p => ({
+                  ...p,
+                  class_id:      e.target.value,
+                  class_applied: cls ? `${cls.name}${cls.section ? ' ' + cls.section : ''}` : '',
+                }));
+              }}>
               <option value="">Select class…</option>
               {classes.map(c => (
-                <option key={c.id} value={`${c.name} ${c.section}`}>
-                  {c.name} {c.section}
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.section ? ' ' + c.section : ''}
                 </option>
               ))}
             </Select>

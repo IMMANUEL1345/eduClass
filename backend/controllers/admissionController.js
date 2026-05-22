@@ -7,7 +7,6 @@ function generateAdmissionNumber(year) {
   const yr = (year || '2025/2026').replace('/', '').slice(2);
   return `ADM${yr}${Date.now().toString().slice(-4)}`;
 }
-
 function generateStudentNumber(year) {
   const yr = (year || '2025/2026').replace('/', '').slice(2);
   return `STU${yr}${Date.now().toString().slice(-4)}`;
@@ -29,9 +28,11 @@ async function list(req, res) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT a.*, u.name AS reviewed_by_name
+      `SELECT a.*, u.name AS reviewed_by_name,
+              c.name AS class_name, c.section AS class_section
        FROM admissions a
-       LEFT JOIN users u ON u.id = a.reviewed_by
+       LEFT JOIN users   u ON u.id = a.reviewed_by
+       LEFT JOIN classes c ON c.id = a.class_id
        ${where}
        ORDER BY a.created_at DESC
        LIMIT $${params.push(limit)} OFFSET $${params.push(offset)}`, params
@@ -44,19 +45,24 @@ async function list(req, res) {
 async function create(req, res) {
   const {
     applicant_name, email, phone, dob, gender, previous_school,
-    class_applied, academic_year, parent_name, parent_phone, parent_email, notes
+    class_applied, class_id, academic_year,
+    parent_name, parent_phone, parent_email, notes
   } = req.body;
-  if (!applicant_name || !class_applied) return error(res, 'Applicant name and class applied are required');
+
+  if (!applicant_name || !class_applied) return error(res, 'Applicant name and class are required');
+
   try {
     const admNum = generateAdmissionNumber(academic_year);
     const { rows: [r] } = await pool.query(
       `INSERT INTO admissions
-        (applicant_name,email,phone,dob,gender,previous_school,class_applied,
-         academic_year,parent_name,parent_phone,parent_email,notes,
-         admission_number,created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+        (applicant_name, email, phone, dob, gender, previous_school,
+         class_applied, class_id, academic_year,
+         parent_name, parent_phone, parent_email, notes,
+         admission_number, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
       [applicant_name, email||null, phone||null, dob||null, gender||null,
-       previous_school||null, class_applied, academic_year||'2025/2026',
+       previous_school||null, class_applied, class_id||null,
+       academic_year||'2025/2026',
        parent_name||null, parent_phone||null, parent_email||null,
        notes||null, admNum, req.user.id]
     );
@@ -68,8 +74,11 @@ async function create(req, res) {
 async function getOne(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT a.*, u.name AS reviewed_by_name
-       FROM admissions a LEFT JOIN users u ON u.id = a.reviewed_by
+      `SELECT a.*, u.name AS reviewed_by_name,
+              c.name AS class_name, c.section AS class_section
+       FROM admissions a
+       LEFT JOIN users   u ON u.id = a.reviewed_by
+       LEFT JOIN classes c ON c.id = a.class_id
        WHERE a.id = $1`, [req.params.id]
     );
     if (!rows[0]) return notFound(res, 'Application not found');
@@ -80,7 +89,7 @@ async function getOne(req, res) {
 // PUT /api/admissions/:id
 async function update(req, res) {
   const fields = ['applicant_name','email','phone','dob','gender',
-                  'previous_school','class_applied','academic_year',
+                  'previous_school','class_applied','class_id','academic_year',
                   'parent_name','parent_phone','parent_email','notes'];
   const updates = []; const params = [];
   fields.forEach(f => {
@@ -101,20 +110,50 @@ async function approve(req, res) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { rows } = await client.query('SELECT * FROM admissions WHERE id = $1', [req.params.id]);
+
+    const { rows } = await client.query(
+      'SELECT * FROM admissions WHERE id = $1', [req.params.id]
+    );
     const app = rows[0];
     if (!app) return notFound(res, 'Application not found');
     if (app.status === 'enrolled') return error(res, 'Already enrolled');
 
-    const { rows: classes } = await client.query(
-      'SELECT id FROM classes WHERE name ILIKE $1 LIMIT 1', [app.class_applied]
-    );
-    if (!classes[0]) return error(res, `Class "${app.class_applied}" not found. Create it first.`);
+    // ── Resolve class ──────────────────────────────────────
+    let classId = app.class_id; // Preferred: stored ID from application form
+
+    if (!classId) {
+      // Fallback 1: match name + section combined  e.g. "JHS 3 A"
+      const { rows: byFull } = await client.query(
+        `SELECT id FROM classes
+         WHERE TRIM(CONCAT(name, ' ', COALESCE(section,''))) ILIKE $1
+         LIMIT 1`,
+        [app.class_applied?.trim()]
+      );
+      if (byFull[0]) classId = byFull[0].id;
+    }
+
+    if (!classId) {
+      // Fallback 2: match name only
+      const { rows: byName } = await client.query(
+        `SELECT id FROM classes WHERE name ILIKE $1 LIMIT 1`,
+        [app.class_applied?.trim()]
+      );
+      if (byName[0]) classId = byName[0].id;
+    }
+
+    if (!classId) {
+      await client.query('ROLLBACK');
+      return error(res,
+        `Cannot find class "${app.class_applied}". ` +
+        `Please go to Classes and create it first, or edit this application to reselect the class.`
+      );
+    }
+    // ──────────────────────────────────────────────────────
 
     const tempPassword = `Edu@${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const hash = await bcrypt.hash(tempPassword, 12);
-    const email = app.email || `${app.admission_number.toLowerCase()}@educlass.school`;
-    const studentNum = generateStudentNumber(app.academic_year);
+    const hash         = await bcrypt.hash(tempPassword, 12);
+    const email        = app.email || `${app.admission_number.toLowerCase()}@educlass.school`;
+    const studentNum   = generateStudentNumber(app.academic_year);
 
     const { rows: [u] } = await client.query(
       `INSERT INTO users (name, email, password_hash, role, force_password_change)
@@ -125,19 +164,22 @@ async function approve(req, res) {
     await client.query(
       `INSERT INTO students (user_id, class_id, student_number, gender, dob, academic_year)
        VALUES ($1,$2,$3,$4,$5,$6)`,
-      [u.id, classes[0].id, studentNum, app.gender||null, app.dob||null, app.academic_year]
+      [u.id, classId, studentNum, app.gender||null, app.dob||null, app.academic_year]
     );
 
     await client.query(
-      `UPDATE admissions SET status='enrolled', reviewed_by=$1, reviewed_at=NOW() WHERE id=$2`,
-      [req.user.id, req.params.id]
+      `UPDATE admissions SET status='enrolled', class_id=$1, reviewed_by=$2, reviewed_at=NOW()
+       WHERE id=$3`,
+      [classId, req.user.id, req.params.id]
     );
 
     await client.query('COMMIT');
     sendWelcomeEmail(email, app.applicant_name, 'student', tempPassword).catch(console.error);
 
-    return success(res, { student_number: studentNum, email, temp_password: tempPassword },
-      'Applicant approved and student account created');
+    return success(res,
+      { student_number: studentNum, email, temp_password: tempPassword },
+      'Applicant approved and student account created'
+    );
   } catch (err) {
     await client.query('ROLLBACK');
     return serverError(res, err);
@@ -149,8 +191,12 @@ async function reject(req, res) {
   const { reason } = req.body;
   try {
     await pool.query(
-      `UPDATE admissions SET status='rejected', reviewed_by=$1, reviewed_at=NOW() WHERE id=$2`,
-      [req.user.id, req.params.id]
+      `UPDATE admissions SET status='rejected', reviewed_by=$1, reviewed_at=NOW(),
+       notes = CASE WHEN $2::text IS NOT NULL
+               THEN COALESCE(notes||E'\n','') || 'Rejection reason: ' || $2
+               ELSE notes END
+       WHERE id=$3`,
+      [req.user.id, reason||null, req.params.id]
     );
     return success(res, {}, 'Application rejected');
   } catch (err) { return serverError(res, err); }

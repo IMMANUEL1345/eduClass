@@ -4,7 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout, selectUser } from '../../store/slices/authSlice';
 import toast from 'react-hot-toast';
 
-const API = process.env.REACT_APP_API_URL || 'https://educlass-api.onrender.com';
+const API = (() => {
+  const base = process.env.REACT_APP_API_URL || 'https://educlass-api.onrender.com';
+  return base.replace(/\/api\/?$/, '') + '/api';
+})();
 
 const NAV = {
   admin: [
@@ -22,6 +25,7 @@ const NAV = {
     { to: '/reports',             label: 'Reports'          },
     { to: '/analytics',           label: 'Analytics'        },
     { to: '/fees',                label: 'Fees'             },
+    { to: '/daily-fees',          label: '🍽️ Feeding & Transport' },
     { to: '/expenses',            label: 'Expenses'         },
     { to: '/inventory',           label: 'Inventory'        },
     { to: '/staff-attendance',    label: 'Staff attendance' },
@@ -47,6 +51,7 @@ const NAV = {
   ],
   accountant: [
     { to: '/fees',               label: 'Fee dashboard'   },
+    { to: '/daily-fees',         label: '🍽️ Feeding & Transport' },
     { to: '/fees/payments/new',  label: 'Record payment'  },
     { to: '/fees/payments',      label: 'Payment history' },
     { to: '/fees/defaulters',    label: 'Defaulters'      },
@@ -96,6 +101,7 @@ const NAV = {
     { to: '/reports',             label: 'Reports'          },
     { to: '/analytics',           label: 'Analytics'        },
     { to: '/fees',                label: 'Fees (view)'      },
+    { to: '/daily-fees',          label: '🍽️ Feeding & Transport' },
     { to: '/expenses',            label: 'Expenses'         },
     { to: '/staff-attendance',    label: 'Staff attendance' },
     { to: '/check-in',            label: 'Check in/out'     },

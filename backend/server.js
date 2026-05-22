@@ -29,7 +29,8 @@ const timetableRoutes       = require('./routes/timetable');
 const staffAttendanceRoutes  = require('./routes/staffAttendance');
 const assignmentRoutes          = require('./routes/assignments');
 const virtualClassroomRoutes    = require('./routes/virtualClassroom');
-const incidentsRouter = require('./routes/incidents');
+const incidentsRouter   = require('./routes/incidents');
+const dailyFeesRoutes   = require('./routes/dailyFees');
 
 
 const app  = express();
@@ -98,7 +99,8 @@ app.use('/api/expenses',    expenseRoutes);
 app.use('/api/timetable',        timetableRoutes);
 app.use('/api/staff-attendance', staffAttendanceRoutes);
 app.use('/api/assignments',        assignmentRoutes);
-app.use('/api/incidents', incidentsRouter);
+app.use('/api/incidents',   incidentsRouter);
+app.use('/api/daily-fees',   dailyFeesRoutes);
 app.use('/api/virtual-classroom',  virtualClassroomRoutes);
 app.use('/api',             commsRoutes);
 
