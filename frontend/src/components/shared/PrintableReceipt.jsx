@@ -85,13 +85,28 @@ export default function PrintableReceipt({ receipt, onClose }) {
   }, [receipt]);
 
   function handlePrint() {
-    const win = window.open('', '_blank', 'width=400,height=700');
-    win.document.write(`<!DOCTYPE html><html><head>
+    // Use hidden iframe — never blocked by browser popup blocker
+    const existingFrame = document.getElementById('receipt-print-frame');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'receipt-print-frame';
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:400px;height:600px;border:none;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head>
       <title>Receipt ${receipt.receipt_number}</title>
       <style>${PRINT_STYLES}</style>
     </head><body>${buildReceiptHTML()}</body></html>`);
-    win.document.close();
-    setTimeout(() => { win.print(); win.close(); }, 400);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    }, 400);
   }
 
   function buildReceiptHTML() {

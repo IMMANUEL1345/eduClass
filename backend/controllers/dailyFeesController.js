@@ -346,55 +346,63 @@ async function dailyStatus(req, res) {
 // ── DAILY REPORT ─────────────────────────────────────────
 async function dailyReport(req, res) {
   const { date_from, date_to, fee_type, academic_year, term } = req.query;
-  const yr = academic_year || CURRENT_YEAR();
-
+  const yr   = academic_year || CURRENT_YEAR();
   const from = date_from || new Date().toISOString().split('T')[0];
   const to   = date_to   || new Date().toISOString().split('T')[0];
 
   try {
-    // Payment summary
-    const conditions = [`dfp.payment_date BETWEEN $1 AND $2`, `dfp.academic_year=$3`];
-    const params = [from, to, yr];
-    if (fee_type)  conditions.push(`dfp.fee_type=$${params.push(fee_type)}`);
-    if (term) conditions.push(`dfp.term=$${params.push(term)}`);
+    // ── Payment summary ───────────────────────────────────
+    const pConds  = [`dfp.payment_date BETWEEN $1 AND $2`];
+    const pParams = [from, to];
+    if (fee_type)     pConds.push(`dfp.fee_type=$${pParams.push(fee_type)}`);
+    if (academic_year) pConds.push(`dfp.academic_year=$${pParams.push(yr)}`);
+    if (term)         pConds.push(`dfp.term=$${pParams.push(term)}`);
 
     const { rows: payments } = await pool.query(
       `SELECT dfp.fee_type,
-              SUM(dfp.amount) AS total_collected,
-              COUNT(*)        AS payment_count
+              SUM(dfp.amount)::numeric AS total_collected,
+              COUNT(*)::int            AS payment_count
        FROM daily_fee_payments dfp
-       WHERE ${conditions.join(' AND ')}
-       GROUP BY dfp.fee_type`, params
-    );
+       WHERE ${pConds.join(' AND ')}
+       GROUP BY dfp.fee_type`,
+      pParams
+    ).catch(() => ({ rows: [] }));
 
-    // Deduction summary
-    const dparams = [from, to, yr];
-    const dconds  = [`d.deduction_date BETWEEN $1 AND $2`];
-    if (fee_type) dconds.push(`d.fee_type=$${dparams.push(fee_type)}`);
+    // ── Deduction summary ─────────────────────────────────
+    const dConds  = [`d.deduction_date BETWEEN $1 AND $2`];
+    const dParams = [from, to];
+    if (fee_type) dConds.push(`d.fee_type=$${dParams.push(fee_type)}`);
 
     const { rows: deductions } = await pool.query(
       `SELECT d.fee_type,
-              SUM(d.amount)  AS total_deducted,
-              COUNT(DISTINCT d.student_id) AS students_covered,
-              COUNT(*)       AS deduction_count
+              SUM(d.amount)::numeric               AS total_deducted,
+              COUNT(DISTINCT d.student_id)::int    AS students_covered,
+              COUNT(*)::int                        AS deduction_count
        FROM daily_fee_deductions d
-       WHERE ${dconds.join(' AND ')}
-       GROUP BY d.fee_type`, dparams
-    );
+       WHERE ${dConds.join(' AND ')}
+       GROUP BY d.fee_type`,
+      dParams
+    ).catch(() => ({ rows: [] }));
 
-    // Recent payments list
+    // ── Recent payments list ──────────────────────────────
+    const rConds  = [`dfp.payment_date BETWEEN $1 AND $2`];
+    const rParams = [from, to];
+    if (fee_type)     rConds.push(`dfp.fee_type=$${rParams.push(fee_type)}`);
+    if (academic_year) rConds.push(`dfp.academic_year=$${rParams.push(yr)}`);
+    if (term)         rConds.push(`dfp.term=$${rParams.push(term)}`);
+
     const { rows: recentPayments } = await pool.query(
       `SELECT dfp.*, u.name AS student_name, s.student_number,
               c.name AS class_name, c.section, ru.name AS recorded_by_name
        FROM daily_fee_payments dfp
-       JOIN students s ON s.id = dfp.student_id
-       JOIN users u    ON u.id = s.user_id
-       JOIN classes c  ON c.id = s.class_id
+       JOIN students s  ON s.id  = dfp.student_id
+       JOIN users u     ON u.id  = s.user_id
+       JOIN classes c   ON c.id  = s.class_id
        LEFT JOIN users ru ON ru.id = dfp.recorded_by
-       WHERE dfp.payment_date BETWEEN $1 AND $2 AND dfp.academic_year=$3
+       WHERE ${rConds.join(' AND ')}
        ORDER BY dfp.created_at DESC LIMIT 100`,
-      [from, to, yr]
-    );
+      rParams
+    ).catch(() => ({ rows: [] }));
 
     return success(res, { payments, deductions, recentPayments, from, to });
   } catch (err) { return serverError(res, err); }
