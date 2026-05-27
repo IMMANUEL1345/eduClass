@@ -243,3 +243,20 @@ export const virtualClassroomAPI = {
   upvoteQuestion:  (id, qaId)        => api.put(`/virtual-classroom/${id}/qa/${qaId}/upvote`),
   joinByCode:      (roomCode)        => api.get(`/virtual-classroom/join/${roomCode}`),
 };
+// ── ADD THESE to your frontend/src/api/index.js gradeAPI object ──
+
+export const gradeAPI = {
+  // existing
+  submit:  (data)   => api.post('/grades', data),
+  query:   (params) => api.get('/grades', { params }),
+  update:  (id, data) => api.put(`/grades/${id}`, data),
+  remove:  (id)     => api.delete(`/grades/${id}`),
+  leaderboard: (classId, params) => api.get(`/grades/leaderboard/${classId}`, { params }),
+
+  // NEW — multi-component grade system
+  getWeights:  (subject_id)  => api.get('/grades/weights', { params: { subject_id } }),
+  setWeights:  (data)        => api.post('/grades/weights', data),
+  getClassScores: (params)   => api.get('/grades/scores', { params }),
+  bulkUpsert:  (data)        => api.post('/grades/scores', data),
+};
+// ─────────────────────────────────────────────────────────────────
