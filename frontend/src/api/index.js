@@ -116,6 +116,10 @@ export const gradeAPI = {
   setWeights:     (data)      => api.post('/grades/weights', data),
   getClassScores: (params)    => api.get('/grades/scores', { params }),
   bulkUpsert:     (data)      => api.post('/grades/scores', data),
+  getEntries:     (params)    => api.get('/grades/entries', { params }),
+  addEntries:     (data)      => api.post('/grades/entries', data),
+  deleteEntry:    (id)        => api.delete(`/grades/entries/${id}`),
+  studentRecord:  (params)    => api.get('/grades/student-record', { params }),
 };
 
 export const reportAPI = {

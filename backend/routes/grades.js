@@ -7,17 +7,27 @@ router.use(authenticate);
 
 const STAFF = ['admin', 'teacher', 'headmaster'];
 
-// ── New multi-component endpoints ─────────────────────────
-router.get('/weights',            authorize(...STAFF),           ctrl.getWeights);
-router.post('/weights',           authorize('admin','headmaster','teacher'), ctrl.setWeights);
-router.get('/scores',             authorize(...STAFF),           ctrl.getClassScores);
-router.post('/scores',            authorize('teacher','admin'),  ctrl.bulkUpsert);
+// ── Weights ───────────────────────────────────────────────
+router.get('/weights',              authorize(...STAFF),          ctrl.getWeights);
+router.post('/weights',             authorize(...STAFF),          ctrl.setWeights);
+
+// ── Multi-component scores (grid) ────────────────────────
+router.get('/scores',               authorize(...STAFF),          ctrl.getClassScores);
+router.post('/scores',              authorize('teacher','admin'),  ctrl.bulkUpsert);
+
+// ── Classwork / Homework entries ─────────────────────────
+router.get('/entries',              authorize(...STAFF),          ctrl.getEntries);
+router.post('/entries',             authorize('teacher','admin'),  ctrl.addEntries);
+router.delete('/entries/:id',       authorize('teacher','admin'),  ctrl.deleteEntry);
+
+// ── Student full record ──────────────────────────────────
+router.get('/student-record',       authorize(...STAFF),          ctrl.studentRecord);
 
 // ── Legacy endpoints ─────────────────────────────────────
-router.post('/',                  authorize('teacher'),          ctrl.submit);
-router.get('/',                   authorize(...STAFF),           ctrl.query);
-router.put('/:id',                authorize('teacher','admin'),  ctrl.update);
-router.delete('/:id',             authorize('admin'),            ctrl.remove);
-router.get('/leaderboard/:classId', authorize(...STAFF),         ctrl.leaderboard);
+router.post('/',                    authorize('teacher'),          ctrl.submit);
+router.get('/',                     authorize(...STAFF),           ctrl.query);
+router.put('/:id',                  authorize('teacher','admin'),  ctrl.update);
+router.delete('/:id',               authorize('admin'),            ctrl.remove);
+router.get('/leaderboard/:classId', authorize(...STAFF),           ctrl.leaderboard);
 
 module.exports = router;
