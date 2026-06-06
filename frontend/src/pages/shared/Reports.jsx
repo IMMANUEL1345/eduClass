@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { reportAPI, classAPI } from '../../api';
+import { reportAPI, classAPI, studentAPI } from '../../api';
 import { useSelector } from 'react-redux';
-import { selectRole } from '../../store/slices/authSlice';
+import { selectRole, selectUser } from '../../store/slices/authSlice';
 import {
   PageHeader, Card, Button, Select, Input, Badge, Spinner,
 } from '../../components/ui';
@@ -35,6 +35,8 @@ function downloadCSV(data, filename, columns) {
 
 export default function Reports() {
   const role        = useSelector(selectRole);
+  const user        = useSelector(selectUser);
+  const [myStudent, setMyStudent] = useState(null); // student's own profile
   const [activeType,  setActiveType]  = useState('term');
   const [classes,     setClasses]     = useState([]);
   const [reports,     setReports]     = useState([]);
@@ -51,10 +53,35 @@ export default function Reports() {
 
   useEffect(() => {
     classAPI.list({}).then(({ data }) => setClasses(data.data)).catch(() => {});
-  }, []);
+    // If student, fetch their own class so we can auto-populate the filter
+    if (role === 'student') {
+      studentAPI.me()
+        .then(({ data }) => {
+          const s = data.data;
+          setMyStudent(s);
+          setFilters(p => ({ ...p, class_id: String(s.class_id) }));
+        })
+        .catch(() => {});
+    }
+  }, [role]);
 
   // ── LOADERS ───────────────────────────────────────────
   async function loadTermReports() {
+    // Student: load their own individual report card directly
+    if (role === 'student') {
+      if (!myStudent) return toast.error('Student profile not loaded yet');
+      setLoading(true); setSelected(null);
+      try {
+        const { data } = await reportAPI.byStudent(myStudent.id);
+        // byStudent returns a single report or array — normalise to array
+        const rows = Array.isArray(data.data) ? data.data : (data.data ? [data.data] : []);
+        setReports(rows);
+        // Auto-open the single card if only one result
+        if (rows.length === 1) setSelected(rows[0]);
+      } catch { toast.error('Failed to load report'); }
+      finally { setLoading(false); }
+      return;
+    }
     if (!filters.class_id) return toast.error('Select a class first');
     setLoading(true); setSelected(null);
     try {
@@ -207,10 +234,20 @@ export default function Reports() {
       {/* Filters */}
       <div className="flex gap-3 mb-5 flex-wrap items-end">
         {['term','attendance','enrollment'].includes(activeType) && (
-          <Select value={filters.class_id} onChange={e => setFilters(p=>({...p,class_id:e.target.value}))} className="w-40">
-            <option value="">{activeType === 'enrollment' ? 'All classes' : 'Select class…'}</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
-          </Select>
+          role === 'student' ? (
+            // Student: show their class as a read-only badge
+            myStudent ? (
+              <span className="px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700
+                             border border-blue-200 rounded-lg">
+                {myStudent.class_name} {myStudent.section}
+              </span>
+            ) : <span className="text-xs text-gray-400">Loading class…</span>
+          ) : (
+            <Select value={filters.class_id} onChange={e => setFilters(p=>({...p,class_id:e.target.value}))} className="w-40">
+              <option value="">{activeType === 'enrollment' ? 'All classes' : 'Select class…'}</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
+            </Select>
+          )
         )}
         {['term','attendance','fee'].includes(activeType) && (
           <Select value={filters.term} onChange={e => setFilters(p=>({...p,term:e.target.value}))} className="w-28">

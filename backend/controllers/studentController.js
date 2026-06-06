@@ -276,4 +276,24 @@ async function unlinkParent(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
-module.exports = { list, create, bulkCreate, myChildren, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };
+
+// GET /api/students/me — logged-in student's own profile + class
+async function me(req, res) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT s.id, s.class_id, s.student_number, s.dob, s.gender, s.academic_year,
+              u.name, u.email,
+              c.name AS class_name, c.section
+       FROM students s
+       JOIN users u   ON u.id = s.user_id
+       JOIN classes c ON c.id = s.class_id
+       WHERE s.user_id = $1
+       LIMIT 1`,
+      [req.user.id]
+    );
+    if (!rows[0]) return notFound(res, 'Student profile not found');
+    return success(res, rows[0]);
+  } catch (err) { return serverError(res, err); }
+}
+
+module.exports = { list, create, bulkCreate, myChildren, me, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };
