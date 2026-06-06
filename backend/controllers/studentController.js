@@ -326,4 +326,39 @@ async function myHistory(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
-module.exports = { list, create, bulkCreate, myChildren, me, myHistory, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };
+
+// POST /api/students/promote — bulk promote students to a new class
+async function promoteStudents(req, res) {
+  const { student_ids, new_class_id, new_academic_year } = req.body;
+  if (!Array.isArray(student_ids) || student_ids.length === 0)
+    return error(res, 'student_ids array is required');
+  if (!new_class_id)      return error(res, 'new_class_id is required');
+  if (!new_academic_year) return error(res, 'new_academic_year is required');
+
+  // Verify destination class exists
+  const { rows: [cls] } = await pool.query(
+    'SELECT id, name, section FROM classes WHERE id = $1', [new_class_id]
+  );
+  if (!cls) return notFound(res, 'Destination class not found');
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let promoted = 0;
+    for (const sid of student_ids) {
+      const { rowCount } = await client.query(
+        'UPDATE students SET class_id = $1, academic_year = $2 WHERE id = $3',
+        [new_class_id, new_academic_year, sid]
+      );
+      if (rowCount > 0) promoted++;
+    }
+    await client.query('COMMIT');
+    return success(res, { promoted, class_name: `${cls.name} ${cls.section}` },
+      `${promoted} student${promoted !== 1 ? 's' : ''} promoted to ${cls.name} ${cls.section}`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return serverError(res, err);
+  } finally { client.release(); }
+}
+
+module.exports = { list, create, bulkCreate, myChildren, me, myHistory, promoteStudents, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };

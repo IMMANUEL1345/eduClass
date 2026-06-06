@@ -23,6 +23,9 @@ router.delete('/entries/:id',       authorize('teacher','admin'),  ctrl.deleteEn
 // ── Student full record ──────────────────────────────────
 router.get('/student-record',       authorize(...STAFF),          ctrl.studentRecord);
 
+// ── Promotion summary (admin / headmaster) ─────────────
+router.get('/promotion-summary', authorize('admin','headmaster'), ctrl.promotionSummary);
+
 // ── Student: own grades ─────────────────────────────────
 router.get('/my',               authorize('student'),          ctrl.myGrades);
 

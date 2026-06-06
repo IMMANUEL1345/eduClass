@@ -14,6 +14,7 @@ router.post('/bulk',          authorize(...ENROLL_ROLES),                   ctrl
 router.post('/',              authorize(...ENROLL_ROLES),                   ctrl.create);
 router.get('/me',             authorize('student'),                          ctrl.me);
 router.get('/me/history',     authorize('student'),                          ctrl.myHistory);
+router.post('/promote',       authorize('admin','headmaster'),               ctrl.promoteStudents);
 router.get('/:id',            authorize(...VIEW_ROLES,'parent','student'),  ctrl.getOne);
 router.put('/:id',            authorize(...ENROLL_ROLES),                   ctrl.update);
 router.delete('/:id',         authorize('admin'),                           ctrl.remove);

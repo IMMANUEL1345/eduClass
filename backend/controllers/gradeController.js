@@ -460,8 +460,47 @@ async function myGrades(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
+
+// GET /api/grades/promotion-summary?class_id=&term=&academic_year=
+async function promotionSummary(req, res) {
+  const { class_id, term, academic_year } = req.query;
+  if (!class_id) return error(res, 'class_id is required');
+
+  // Build conditions for the LEFT JOIN on grade_scores
+  const gradesConds = ['gs.student_id = s.id'];
+  const params      = [class_id];
+  if (term)          gradesConds.push(`gs.term = $${params.push(term)}`);
+  if (academic_year) gradesConds.push(`gs.academic_year = $${params.push(academic_year)}`);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         s.id                                              AS student_id,
+         u.name                                            AS student_name,
+         s.student_number,
+         ROUND(AVG(gs.final_score)::numeric, 1)           AS average,
+         COUNT(DISTINCT gs.subject_id)                    AS subjects_with_grades,
+         COUNT(DISTINCT sub_all.id)                       AS total_subjects,
+         RANK() OVER (
+           ORDER BY AVG(gs.final_score) DESC NULLS LAST
+         )                                                AS class_position
+       FROM students s
+       JOIN users u          ON u.id  = s.user_id
+       LEFT JOIN grade_scores gs
+              ON ${gradesConds.join(' AND ')}
+       LEFT JOIN subjects sub_all
+              ON sub_all.class_id = s.class_id
+       WHERE s.class_id = $1
+       GROUP BY s.id, u.name, s.student_number
+       ORDER BY average DESC NULLS LAST, u.name`,
+      params
+    );
+    return success(res, rows);
+  } catch (err) { return serverError(res, err); }
+}
+
 module.exports = {
-  submit, query, update, remove, leaderboard,
+  submit, query, update, remove, leaderboard, promotionSummary,
   getWeights, setWeights,
   getClassScores, bulkUpsert,
   getEntries, addEntries, deleteEntry, studentRecord,

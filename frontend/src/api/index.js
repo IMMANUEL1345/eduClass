@@ -69,6 +69,7 @@ export const studentAPI = {
   bulkCreate:  (students) => api.post('/students/bulk', { students }),
   me:          ()         => api.get('/students/me'),
   myHistory:   ()         => api.get('/students/me/history'),
+  promote:     (body)     => api.post('/students/promote', body),
   myChildren:  ()         => api.get('/students/my-children'),
   getOne:      (id)       => api.get(`/students/${id}`),
   update:      (id, b)    => api.put(`/students/${id}`, b),
@@ -121,7 +122,8 @@ export const gradeAPI = {
   getEntries:     (params)    => api.get('/grades/entries', { params }),
   addEntries:     (data)      => api.post('/grades/entries', data),
   deleteEntry:    (id)        => api.delete(`/grades/entries/${id}`),
-  studentRecord:  (params)    => api.get('/grades/student-record', { params }),
+  studentRecord:       (params) => api.get('/grades/student-record', { params }),
+  promotionSummary:    (params) => api.get('/grades/promotion-summary', { params }),
   myGrades:       (params)    => api.get('/grades/my', { params }),
 };
 
