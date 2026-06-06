@@ -120,6 +120,7 @@ export const gradeAPI = {
   addEntries:     (data)      => api.post('/grades/entries', data),
   deleteEntry:    (id)        => api.delete(`/grades/entries/${id}`),
   studentRecord:  (params)    => api.get('/grades/student-record', { params }),
+  myGrades:       (params)    => api.get('/grades/my', { params }),
 };
 
 export const reportAPI = {
