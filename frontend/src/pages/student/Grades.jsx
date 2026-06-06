@@ -5,7 +5,13 @@ import { PageHeader, Card, Badge, Select, Input, Spinner } from '../../component
 import { toLetterGrade } from '../../utils/grades';
 
 const TERMS        = ['Term 1', 'Term 2', 'Term 3'];
-const CURRENT_YEAR = `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`;
+// Ghana school year: Sep–Aug. In Jan–Aug we're still in the PREVIOUS year's cycle.
+function getCurrentAcademicYear() {
+  const now = new Date();
+  const y   = now.getFullYear();
+  return now.getMonth() >= 8 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
+}
+const CURRENT_YEAR = getCurrentAcademicYear();
 
 function gradeColor(g) {
   if (!g) return 'gray';

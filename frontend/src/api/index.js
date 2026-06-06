@@ -67,6 +67,7 @@ export const studentAPI = {
   list:        (params)   => api.get('/students', { params }),
   create:      (body)     => api.post('/students', body),
   bulkCreate:  (students) => api.post('/students/bulk', { students }),
+  me:          ()         => api.get('/students/me'),
   myChildren:  ()         => api.get('/students/my-children'),
   getOne:      (id)       => api.get(`/students/${id}`),
   update:      (id, b)    => api.put(`/students/${id}`, b),

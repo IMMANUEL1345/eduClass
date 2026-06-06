@@ -52,9 +52,8 @@ export default function Reports() {
   const availableTypes = REPORT_TYPES.filter(t => t.roles.includes(role));
 
   useEffect(() => {
-    classAPI.list({}).then(({ data }) => setClasses(data.data)).catch(() => {});
-    // If student, fetch their own class so we can auto-populate the filter
     if (role === 'student') {
+      // Students cannot call /api/classes — fetch own profile instead
       studentAPI.me()
         .then(({ data }) => {
           const s = data.data;
@@ -62,6 +61,9 @@ export default function Reports() {
           setFilters(p => ({ ...p, class_id: String(s.class_id) }));
         })
         .catch(() => {});
+    } else {
+      // Teachers / admin / accountant etc. can list all classes
+      classAPI.list({}).then(({ data }) => setClasses(data.data)).catch(() => {});
     }
   }, [role]);
 
