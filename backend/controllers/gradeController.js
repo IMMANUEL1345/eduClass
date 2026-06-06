@@ -411,9 +411,54 @@ async function studentRecord(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
+
+// GET /api/grades/my?term=&academic_year=
+async function myGrades(req, res) {
+  const { term, academic_year } = req.query;
+  try {
+    // Find the student record linked to this user account
+    const { rows: studentRows } = await pool.query(
+      'SELECT id FROM students WHERE user_id = $1 LIMIT 1',
+      [req.user.id]
+    );
+    if (studentRows.length === 0)
+      return error(res, 'No student record found for this account');
+
+    const studentId = studentRows[0].id;
+    const conds  = ['gs.student_id = $1'];
+    const params = [studentId];
+
+    if (term)          conds.push(`gs.term = $${params.push(term)}`);
+    if (academic_year) conds.push(`gs.academic_year = $${params.push(academic_year)}`);
+
+    const { rows } = await pool.query(
+      `SELECT
+         gs.id,
+         gs.classwork_score,
+         gs.homework_score,
+         gs.midterm_score,
+         gs.project_score,
+         gs.exam_score,
+         gs.final_score,
+         gs.letter_grade,
+         gs.term,
+         gs.academic_year,
+         sub.id   AS subject_id,
+         sub.name AS subject_name
+       FROM grade_scores gs
+       JOIN subjects sub ON sub.id = gs.subject_id
+       WHERE ${conds.join(' AND ')}
+       ORDER BY sub.name`,
+      params
+    );
+    return success(res, rows);
+  } catch (err) { return serverError(res, err); }
+}
+
 module.exports = {
   submit, query, update, remove, leaderboard,
   getWeights, setWeights,
   getClassScores, bulkUpsert,
   getEntries, addEntries, deleteEntry, studentRecord,
+  myGrades,
 };

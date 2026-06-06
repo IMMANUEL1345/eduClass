@@ -23,6 +23,9 @@ router.delete('/entries/:id',       authorize('teacher','admin'),  ctrl.deleteEn
 // ── Student full record ──────────────────────────────────
 router.get('/student-record',       authorize(...STAFF),          ctrl.studentRecord);
 
+// ── Student: own grades ─────────────────────────────────
+router.get('/my',               authorize('student'),          ctrl.myGrades);
+
 // ── Legacy endpoints ─────────────────────────────────────
 router.post('/',                    authorize('teacher'),          ctrl.submit);
 router.get('/',                     authorize(...STAFF),           ctrl.query);

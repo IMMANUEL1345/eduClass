@@ -31,6 +31,7 @@ import TeacherGrades     from './pages/teacher/Grades';
 // Parent / Student
 import ParentDashboard  from './pages/parent/Dashboard';
 import StudentDashboard from './pages/student/Dashboard';
+import StudentGrades    from './pages/student/Grades';
 
 // Shared
 import Reports       from './pages/shared/Reports';
@@ -74,6 +75,12 @@ function AssignmentsRoute() {
   if (role === 'student') return <StudentAssignments />;
   if (role === 'parent')  return <ParentAssignments />;
   return <TeacherAssignments />;
+}
+
+function GradesRoute() {
+  const role = useSelector(selectRole);
+  if (role === 'student') return <StudentGrades />;
+  return <TeacherGrades />;
 }
 
 function DashboardRedirect() {
@@ -132,7 +139,7 @@ function AppRoutes() {
 
           {/* Academic */}
           <Route path="/attendance"           element={<TeacherAttendance />} />
-          <Route path="/grades"               element={<TeacherGrades />} />
+          <Route path="/grades"               element={<GradesRoute />} />
           <Route path="/reports"              element={<Reports />} />
           <Route path="/messages"             element={<Messages />} />
           <Route path="/announcements"        element={<Announcements />} />
