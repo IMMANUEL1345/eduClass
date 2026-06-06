@@ -20,6 +20,7 @@ import Students         from './pages/admin/Students';
 import StudentDetail    from './pages/admin/StudentDetail';
 import Teachers         from './pages/admin/Teachers';
 import Classes          from './pages/admin/Classes';
+import Promote          from './pages/admin/Promote';
 import Analytics        from './pages/admin/Analytics';
 import UserManagement   from './pages/admin/UserManagement';
 
@@ -130,6 +131,7 @@ function AppRoutes() {
           <Route path="/students/:id"         element={<StudentDetail />} />
           <Route path="/teachers"             element={<Teachers />} />
           <Route path="/classes"              element={<Classes />} />
+          <Route path="/promote"              element={<Promote />} />
           <Route path="/analytics"            element={<Analytics />} />
           <Route path="/timetable"            element={<Timetable />} />
           <Route path="/subject-assignments"  element={<SubjectTeacherAssignment />} />
