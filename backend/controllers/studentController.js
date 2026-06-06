@@ -296,4 +296,34 @@ async function me(req, res) {
   } catch (err) { return serverError(res, err); }
 }
 
-module.exports = { list, create, bulkCreate, myChildren, me, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };
+
+// GET /api/students/me/history — all classes + years this student has records in
+async function myHistory(req, res) {
+  try {
+    const { rows: [s] } = await pool.query(
+      'SELECT id, class_id, academic_year FROM students WHERE user_id = $1 LIMIT 1',
+      [req.user.id]
+    );
+    if (!s) return notFound(res, 'Student profile not found');
+
+    const { rows } = await pool.query(
+      `-- Grades already recorded (historical + current)
+       SELECT DISTINCT c.id AS class_id, c.name AS class_name, c.section, gs.academic_year
+       FROM grade_scores gs
+       JOIN subjects sub ON sub.id = gs.subject_id
+       JOIN classes  c   ON c.id  = sub.class_id
+       WHERE gs.student_id = $1
+       UNION
+       -- Always include current enrolment even if no grades yet
+       SELECT c.id, c.name, c.section, s2.academic_year
+       FROM students s2
+       JOIN classes c ON c.id = s2.class_id
+       WHERE s2.id = $1
+       ORDER BY academic_year DESC, class_name`,
+      [s.id]
+    );
+    return success(res, rows);
+  } catch (err) { return serverError(res, err); }
+}
+
+module.exports = { list, create, bulkCreate, myChildren, me, myHistory, getOne, update, remove, getGrades, getAttendance, getReports, getParents, linkParent, unlinkParent };

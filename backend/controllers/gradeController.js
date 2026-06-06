@@ -412,9 +412,9 @@ async function studentRecord(req, res) {
 }
 
 
-// GET /api/grades/my?term=&academic_year=
+// GET /api/grades/my?term=&academic_year=&class_id=
 async function myGrades(req, res) {
-  const { term, academic_year } = req.query;
+  const { term, academic_year, class_id } = req.query;
   try {
     // Find the student record linked to this user account
     const { rows: studentRows } = await pool.query(
@@ -430,6 +430,7 @@ async function myGrades(req, res) {
 
     if (term)          conds.push(`gs.term = $${params.push(term)}`);
     if (academic_year) conds.push(`gs.academic_year = $${params.push(academic_year)}`);
+    if (class_id)      conds.push(`sub.class_id = $${params.push(class_id)}`);
 
     const { rows } = await pool.query(
       `SELECT
@@ -443,10 +444,14 @@ async function myGrades(req, res) {
          gs.letter_grade,
          gs.term,
          gs.academic_year,
-         sub.id   AS subject_id,
-         sub.name AS subject_name
+         sub.id     AS subject_id,
+         sub.name   AS subject_name,
+         sub.class_id,
+         c.name     AS class_name,
+         c.section
        FROM grade_scores gs
-       JOIN subjects sub ON sub.id = gs.subject_id
+       JOIN subjects sub ON sub.id  = gs.subject_id
+       JOIN classes  c   ON c.id    = sub.class_id
        WHERE ${conds.join(' AND ')}
        ORDER BY sub.name`,
       params

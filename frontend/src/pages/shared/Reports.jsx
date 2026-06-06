@@ -53,12 +53,14 @@ export default function Reports() {
 
   useEffect(() => {
     if (role === 'student') {
-      // Students cannot call /api/classes — fetch own profile instead
-      studentAPI.me()
+      // Students cannot call /api/classes — fetch own class history instead
+      studentAPI.myHistory()
         .then(({ data }) => {
-          const s = data.data;
-          setMyStudent(s);
-          setFilters(p => ({ ...p, class_id: String(s.class_id) }));
+          const rows = data.data || [];
+          setMyStudent(rows); // reuse myStudent to hold history array
+          if (rows.length > 0) {
+            setFilters(p => ({ ...p, class_id: String(rows[0].class_id), academic_year: rows[0].academic_year }));
+          }
         })
         .catch(() => {});
     } else {
@@ -237,13 +239,20 @@ export default function Reports() {
       <div className="flex gap-3 mb-5 flex-wrap items-end">
         {['term','attendance','enrollment'].includes(activeType) && (
           role === 'student' ? (
-            // Student: show their class as a read-only badge
-            myStudent ? (
-              <span className="px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700
-                             border border-blue-200 rounded-lg">
-                {myStudent.class_name} {myStudent.section}
-              </span>
-            ) : <span className="text-xs text-gray-400">Loading class…</span>
+            // Student: dropdown of their own class history
+            myStudent && myStudent.length > 0 ? (
+              <Select
+                value={filters.class_id}
+                onChange={e => setFilters(p => ({ ...p, class_id: e.target.value }))}
+                className="w-36"
+              >
+                {Array.from(new Map(myStudent.map(h => [h.class_id, h])).values()).map(c => (
+                  <option key={c.class_id} value={c.class_id}>
+                    {c.class_name} {c.section}
+                  </option>
+                ))}
+              </Select>
+            ) : <span className="text-xs text-gray-400">Loading classes…</span>
           ) : (
             <Select value={filters.class_id} onChange={e => setFilters(p=>({...p,class_id:e.target.value}))} className="w-40">
               <option value="">{activeType === 'enrollment' ? 'All classes' : 'Select class…'}</option>
@@ -257,9 +266,21 @@ export default function Reports() {
           </Select>
         )}
         {['term','attendance','enrollment','fee'].includes(activeType) && (
-          <Input value={filters.academic_year}
-            onChange={e => setFilters(p=>({...p,academic_year:e.target.value}))}
-            className="w-28" placeholder="2025/2026" />
+          role === 'student' && myStudent && myStudent.length > 0 ? (
+            <Select
+              value={filters.academic_year}
+              onChange={e => setFilters(p => ({ ...p, academic_year: e.target.value }))}
+              className="w-32"
+            >
+              {[...new Set(myStudent.map(h => h.academic_year))].sort().reverse().map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </Select>
+          ) : (
+            <Input value={filters.academic_year}
+              onChange={e => setFilters(p=>({...p,academic_year:e.target.value}))}
+              className="w-28" placeholder="2025/2026" />
+          )
         )}
         {activeType === 'expense' && (
           <Input value={filters.year} type="number"
