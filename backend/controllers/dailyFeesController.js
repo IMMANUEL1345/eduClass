@@ -142,8 +142,8 @@ async function recordPayment(req, res) {
     const { rows: [pmt] } = await client.query(
       `INSERT INTO daily_fee_payments
         (student_id, fee_type, amount, payment_method, receipt_number,
-         term, academic_year, recorded_by, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+         term, academic_year, recorded_by, notes, payment_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CURRENT_DATE) RETURNING *`,
       [student_id, fee_type, amount, payment_method || 'cash',
        receipt, termVal, yr, req.user.id, notes || null]
     );
@@ -191,8 +191,8 @@ async function listPayments(req, res) {
   if (student_id)  conditions.push(`dfp.student_id = $${params.push(student_id)}`);
   if (academic_year) conditions.push(`dfp.academic_year = $${params.push(academic_year)}`);
   if (term)        conditions.push(`dfp.term = $${params.push(term)}`);
-  if (date_from)   conditions.push(`dfp.payment_date >= $${params.push(date_from)}`);
-  if (date_to)     conditions.push(`dfp.payment_date <= $${params.push(date_to)}`);
+  if (date_from)   conditions.push(`COALESCE(dfp.payment_date, dfp.created_at::date) >= $${params.push(date_from)}`);
+  if (date_to)     conditions.push(`COALESCE(dfp.payment_date, dfp.created_at::date) <= $${params.push(date_to)}`);
   try {
     const { rows } = await pool.query(
       `SELECT dfp.*,
@@ -352,7 +352,7 @@ async function dailyReport(req, res) {
 
   try {
     // ── Payment summary ───────────────────────────────────
-    const pConds  = [`dfp.payment_date BETWEEN $1 AND $2`];
+    const pConds  = [`COALESCE(dfp.payment_date, dfp.created_at::date) BETWEEN $1 AND $2`];
     const pParams = [from, to];
     if (fee_type)     pConds.push(`dfp.fee_type=$${pParams.push(fee_type)}`);
     if (academic_year) pConds.push(`dfp.academic_year=$${pParams.push(yr)}`);
@@ -385,7 +385,7 @@ async function dailyReport(req, res) {
     ).catch(() => ({ rows: [] }));
 
     // ── Recent payments list ──────────────────────────────
-    const rConds  = [`dfp.payment_date BETWEEN $1 AND $2`];
+    const rConds  = [`COALESCE(dfp.payment_date, dfp.created_at::date) BETWEEN $1 AND $2`];
     const rParams = [from, to];
     if (fee_type)     rConds.push(`dfp.fee_type=$${rParams.push(fee_type)}`);
     if (academic_year) rConds.push(`dfp.academic_year=$${rParams.push(yr)}`);
