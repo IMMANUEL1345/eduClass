@@ -36,7 +36,7 @@ const dailyFeesRoutes   = require('./routes/dailyFees');
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (origin.includes('vercel.app')) return callback(null, true);
@@ -46,11 +46,12 @@ app.use(cors({
     callback(new Error('CORS: ' + origin + ' not allowed'));
   },
   credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-}));
+  methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
+  allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+};
 
-app.options('*', cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
